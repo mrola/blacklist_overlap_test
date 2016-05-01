@@ -2,7 +2,9 @@
 The blacklist overlap test provides a measure on the degree to which one feed is contained within some other feed. It is a metric that may be used to exclude blacklist feeds that is already contained in other feeds.
 
 ## Purpose
-The purpose of this Jupyter notebook is to provide a measure on the degree to which blacklists overlap in terms of IPv4 entries. The notebook extract IPv4 addresses from public and private blacklists and then provides a barchart showing sizes per blacklist and a heatmap showing the degree of overlap between the blacklists. 
+The purpose of this Jupyter notebook is to provide a measure on the degree to which blacklists overlap in terms of IPv4 entries. The notebook extract IPv4 addresses from public and private blacklists and then provides a barchart showing sizes per blacklist and a heatmap showing the degree of overlap between the blacklists. The notebook also supports importing blacklists from the local filesystem.
+
+Names of feeds or local files to be imported are all set within the notebook. There are no assumption on the formats of these files, the notebook simply uses a regexp to search for IPv4 addresses line by line.
 
 ### Plots
 The notebook outputs two plots, one that shows blacklist feed sizes and one that shows the actual overlap between feeds. Example output is shown below.
