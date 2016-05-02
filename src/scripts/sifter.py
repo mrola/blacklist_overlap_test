@@ -8,6 +8,7 @@ import socket
 import logging
 import platform
 import itertools
+import configparser
 import requests as req
 from os.path import expanduser
 
@@ -20,31 +21,10 @@ import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
 
-
-# Today is used as date unless DATE is set here, format"YYYY-MM-DD"
-DATE = None
-
-# If True, save data to DIR_OUTPOUT_* as defined below
-SAVE = False
-
-# GET_URLS=True means that ioc data is fetched from public/internet sources, see inbound URLs section
-GET_URLS = True
-
-# READ_PREFETCH=True means that ioc data is fetched from private/local files, see Prefetched section
-READ_PREFETCH = True
-
-# TIMEOUT - number of seconds Requests will wait for a response from the server (both connect and between reads)
-TIMEOUT = 4
-
-# ANNOTATE - Set to True if actual value should be written in each heatmap cell
-ANNOTATE=True
-
-# Paths
 home = expanduser("~")
-base = '/projs/blacklist_overlap_test/data/raw'
-DIR_OUTPUT_URL = home + base + '/public_inbound/from_url/'
-DIR_OUTPUT_PREFETCHED = home + base + '/private_inbound/prefetched/output/'
-DIR_INPUT_PREFETCHED = home + base + '/private_inbound/prefetched/input/'
+
+# Path to config file
+path_config =  home + '/projs/blacklist_overlap_test/src/config/sifter.conf'
 
 # Pandas - global display options
 pd.set_option('display.width', 120)
@@ -54,67 +34,44 @@ pd.set_option('max_colwidth', 0)
 sns.set()
 sns.set(style="whitegrid", rc={"figure.figsize": (14, 8)})
 sns.set_palette("bone")
-sns.palplot(sns.color_palette())
-
-
-# Key: URL to be fetched
-# Value: Description of source.
-
-inbound_urls = {
-    'http://www.malwaredomainlist.com/hostslist/ip.txt': 'malwaredomainlist_ip.txt',
-    'http://malc0de.com/bl/IP_Blacklist.txt': 'malc0de_IP_Blacklist.txt',
-    'http://www.openbl.org/lists/base.txt': 'openbl.org_base.txt',
-    'http://lists.blocklist.de/lists/all.txt': 'blocklist.de_all.txt',
-    'https://reputation.alienvault.com/reputation.generic': 'alienvault_reputation.generic',
-    'http://rules.emergingthreats.net/blockrules/compromised-ips.txt': 'emergingthreats_compromised-ips.txt',
-    'http://rules.emergingthreats.net/fwrules/emerging-Block-IPs.txt': 'emergingthreats_emerging-Block-IPs.txt',
-    'https://zeustracker.abuse.ch/blocklist.php?download=badips': 'zeustracker_blocklist_badips',
-    'https://palevotracker.abuse.ch/blocklists.php?download=ipblocklist': 'palevotracker_blocklists_ipblocklist',
-    'https://feodotracker.abuse.ch/blocklist/?download=ipblocklist': 'feodotracker_blocklists_ipblocklist',
-    'https://feodotracker.abuse.ch/blocklist/?download=badips': 'feodotracker_blocklists_badips',
-    'http://torstatus.blutmagie.de/ip_list_exit.php/Tor_ip_list_EXIT.csv': 'blutmagie_Tor_ip_list_EXIT',
-    'http://torstatus.blutmagie.de/ip_list_all.php/Tor_ip_list_ALL.csv': 'blutmagie_Tor_ip_list_ALL'
-}
-
-inbound_urls_test = {
-    'http://www.malwaredomainlist.com/hostslist/ip.txt': 'malwaredomainlist_ip.txt',
-    'http://torstatus.blutmagie.de/ip_list_all.php/Tor_ip_list_ALL.csv': 'torstatus_Tor_ip_list_ALL',
-    'http://malc0de.com/bl/IP_Blacklist.txt': 'malc0de_IP_Blacklist.txt',
-    'http://www.openbl.org/lists/base.txt': 'openbl.org_base.txt',
-    'http://rules.emergingthreats.net/fwrules/emerging-Block-IPs.txt': 'emergingthreats_emerging-Block-IPs.txt'
-}
-
-
-
-inbound_prefetched = {
-    DIR_INPUT_PREFETCHED + 'compromised-ips.ioc': 'compromised-ips.ioc',
-    DIR_INPUT_PREFETCHED + 'ips.ioc': 'ips.ioc',
-    DIR_INPUT_PREFETCHED + 'zeus_ipblocklist.ioc': 'zeus_ipblocklist.ioc'
-}
-
-inbound_prefetched_test = {
-    DIR_INPUT_PREFETCHED + 'compromised-ips.ioc': 'compromised-ips.ioc',
-    DIR_INPUT_PREFETCHED + 'compromised-ips_test.ioc': 'compromised-ips_test.ioc',
-    DIR_INPUT_PREFETCHED + 'zeus_ipblocklist.ioc': 'zeus_ipblocklist.ioc',
-    DIR_INPUT_PREFETCHED + 'zeus_ipblocklist_test.ioc': 'zeus_ipblocklist_test.ioc'
-}
 
 
 class Common:
-
     def set_date(self):
+        DATE = ReadConf().retrieve('get', 'misc', 'DATE')
         if DATE:
-            return DATE    
+            return DATE 
         else:
             return(time.strftime("%Y-%m-%d"))
 
 
+class ReadConf():
+    def __init__(self):
+        self.logger = logging.getLogger("ReadConf")
+        self.confparse = configparser.ConfigParser(delimiters=['='])
+        try:
+            self.confparse.read(path_config)
+        except Exception as e:
+            self.logger.error("Failed attempt to read config at %s: %s" % (path_config, e))
+            sys.exit('Failed to read conf. Abort.')
+
+    def retrieve(self, method, section, key=None):
+        try:
+            if method == 'get':
+                return self.confparse.get(section, key)
+            elif method == 'items':
+                return self.confparse.items(section)
+            elif method == 'getboolean':
+                return self.confparse.getboolean(section, key)
+        except Exception as e:
+            self.logger.error("Failed to access conf values: %s" % e)
+
 class GetData(Common):
     def __init__(self):
+        self.logger = logging.getLogger("GetData")
         self.cols = ["entity","type","direction","source","notes","date"]
         self.df = pd.DataFrame(columns=self.cols)
         self.ipv4 = re.compile("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}")
-
 
     def do_pandas(self, ips, name):
         '''
@@ -127,7 +84,7 @@ class GetData(Common):
         df_ips = pd.DataFrame()
         date = self.set_date()
 
-        tup = (ips, 'IPv4', 'inbound',name, "", date)
+        tup = (ips, 'IPv4', 'inbound', name, "", date)
         (df_ips['entity'], df_ips['type'], df_ips['direction'], \
              df_ips['source'], df_ips['notes'], df_ips['date']) = tup 
         self.df = self.df.append(df_ips, ignore_index=True)
@@ -138,7 +95,6 @@ class GetData(Common):
         '''
         Checks if an IPv4 address is valid
         '''
-        logger = logging.getLogger("GetData.valid_ip")
         try: 
             socket.inet_aton(address)
         except:
@@ -168,54 +124,55 @@ class GetData(Common):
         '''
         Fetch blacklist feeds from urls (as defined in inbound_urls)
         '''
-        logger = logging.getLogger("GetData.get_url")
         fail_count = 0
-        for url, name in iter(urls.items()):
-            logger.info('Fetching: %s' % url)
+        timeout = int(ReadConf().retrieve('get', 'misc', 'TIMEOUT'))
+        for desc, url in iter(urls.items()):
+            self.logger.info('Fetching: %s' % url)
             try:
-                r = req.get(url, timeout=TIMEOUT)
+                r = req.get(url, timeout=timeout)
                 if r.status_code == 200:
-                    logger.info('Got status 200 back...')
+                    self.logger.info('Got status 200 back...')
                     ips = self.parse_content(r.content.splitlines())
                     if ips:
-                        self.df = self.do_pandas(ips, name)
+                        self.df = self.do_pandas(ips, desc)
                     else:
-                        logger.warning(' WARNING: Found no valid ipv4 addresses.')
+                        self.logger.warning(' WARNING: Found no valid ipv4 addresses.')
                 else:
-                    logger.warning(' WARNING: Got status %d' % r.status_code)
+                    self.logger.warning(' WARNING: Got status %d' % r.status_code)
             except req.ConnectionError as e:            
-                logger.error(' ERROR: Failed to fetch url due connectivity issues.')
-                logger.error(' Error msg: %s' % e)
+                self.logger.error(' ERROR: Failed to fetch url due connectivity issues.')
+                self.logger.error(' Error msg: %s' % e)
                 fail_count += 1
                 if fail_count > 2:
-                    logger.error('\nConnectivity issues assumed to be permanent. Will abort.')
+                    self.logger.error('Connectivity issues assumed to be permanent. Will abort.')
                     break
             except Exception as e:
-                logger.error(' ERROR: Failed to fetch url.\nError msg: %s' % e)
+                self.logger.error(' ERROR: Failed to fetch url: %s' % e)
         return self.df
 
 
 
-    def get_prefetched(self, files):
+    def get_prefetched(self, files, indata_path):
         '''
         Read files defined in the "inbound_prefetched" dictionary.
         '''
         dflist = []
-        print('Reading data:')
-        for filen, description in iter(files.items()):
+        self.logger.info('Reading data:')
+        for desc, filen in iter(files.items()):
+            filen = indata_path + filen
             if not os.path.exists(filen): 
-                print(' WARNING: Failed to read data from:\n\t%s...' % filen) 
+                self.logger.info(' WARNING: Failed to read data from: %s...' % filen) 
             else:
                 try: 
-                    print('%s...' % (filen)) 
+                    self.logger.info('%s...' % (filen)) 
                     with open(filen, 'rb') as f:
                         ips = self.parse_content(f.readlines())
                         if ips:
-                            self.df = self.do_pandas(ips, description)
+                            self.df = self.do_pandas(ips, desc)
                         else:
-                            print(' WARNING: Failed to find valid entries.')
+                            self.logger.warning(' WARNING: Failed to find valid entries.')
                 except Exception as e:
-                    print(' ERROR: Caught exception: %s\nAbort...' % e)
+                    self.logger.error(' ERROR: Caught exception: %s Abort...' % e)
                     break
         return self.df
 
@@ -223,6 +180,7 @@ class GetData(Common):
 
 class PlotData(Common):
     def __init__(self, df):
+        self.logger = logging.getLogger("PlotData")
         self.df = df
 
     def fill_heatmap(self, cols, dfp, df_heat):
@@ -259,83 +217,80 @@ class PlotData(Common):
         colpairs = itertools.combinations(pd.unique(self.df.source), 2)
         for colpair in colpairs:
             self.fill_heatmap(list(colpair), dfp, df_heat)
-
         return df_heat
 
 
     def plot_counts(self):
         ''' Barchart showing size of each blacklist feed '''
-
         fig, ax = plt.subplots()
         sns.set(style="whitegrid", font_scale=1.1, rc={"figure.figsize": (14, 4)})
         ax = sns.countplot(y="source", data=self.df.sort_index(axis=1, ascending=False), palette="bone");
         ax.set(title="Barplot showing the count of entries per source - %s\n" % (self.set_date()));
-#        fig.savefig("testing.png", bbox_inches='tight', pad_inches=1)
-#        plt.show()
+        return fig
 
 
     def plot_heat(self):
         ''' Heatmap showing the overlap between blacklist feeds '''
+        annotate = ReadConf().retrieve('getboolean', 'bools','ANNOTATE')
         df_heat = self.do_heatframes()
-
         fig, ax = plt.subplots()
-        ax = sns.heatmap(df_heat, linewidths=.5, annot=ANNOTATE, cmap="bone");    
+        ax = sns.heatmap(df_heat, linewidths=.5, annot=annotate, cmap="bone");    
         ax.set(title="Overlap test - heatmap showing overlap between blacklists - %s\n" % (self.set_date()))
         plt.xticks(rotation=40, horizontalalignment='right');
         plt.yticks(rotation=0);
-#        fig.savefig("testing.png")
-        fig.savefig("testing.png", bbox_inches='tight', pad_inches=1)
-#        plt.show()
-
+        return fig
 
 
 class WrapItUp(Common):
     def __init__(self, df, dir_output):
+        self.logger = logging.getLogger("WrapItUp")
         self.df = df
         self.path= dir_output
         self.doit()
 
     def show_info(self):  
         ''' Print some info to verify result '''
-        print('\n>> General info to verify everything is ok <<')
-        print('\nVerify we got all sources:\n%s\n' % pd.Series(pd.unique(self.df.source)))
-        print('First few frame rows:\n%s\n' % self.df.head())
-        print('Frame contains %d entries.\n\n' % self.df.shape[0])   
+        self.logger.info('Verify we got all sources:\n%s\n' % pd.Series(pd.unique(self.df.source)))
+        self.logger.info('First few frame rows:\n%s\n' % self.df.head())
+        self.logger.info('Frame contains %d entries.\n' % self.df.shape[0])   
 
-    def save_frame(self):
-        ''' Write to .csv '''
-        date = self.set_date()
-        udate = date.replace('-', '')
-        savepath = self.path + udate + '.csv'
-        if not os.path.exists(self.path):
-            print("Failed to find path: %s" % self.path)
-            print("Setting path to '/tmp/'")
-            savepath = '/tmp/' + udate + '.csv'
-        print("Attempting to save frame...")
-        try:
-            self.df.to_csv(savepath, index=False)
-            print("Successfully saved frame to:\n\t%s" % savepath)
-        except Exception as e:
-            print("ERROR: %s\n" % e)
+    def save_data(self, data, dtype, ext, desc):
+        ''' Write to disk '''
+        save = ReadConf().retrieve('getboolean', 'bools', 'SAVE')
+        if save:
+            date = self.set_date()
+            udate = date.replace('-', '')
+            savepath = self.path + desc + '_' + udate + ext
+            if not os.path.exists(self.path):
+                self.logger.warning("Failed to find path: %s" % self.path)
+                self.logger.warning("Setting path to '/tmp/'")
+                savepath = '/tmp/' + desc + '_' + udate + ext
+            self.logger.debug("Attempting to save data...")
+            try:
+                if dtype == 'frame':
+                    self.df.to_csv(savepath, index=False)
+                if dtype == 'fig':
+                    data.savefig(savepath, bbox_inches='tight', pad_inches=1)
+                self.logger.info("Successfully saved data to: %s" % savepath)
+            except Exception as e:
+                self.logger.error("ERROR: %s" % e)
 
     def doit(self):
         '''
         '''
         if self.df.values.size > 0:
             self.show_info()
+            self.save_data(self.df, 'frame', '.csv', 'raw')
             plotdata = PlotData(self.df)
             barplot = plotdata.plot_counts()
+            self.save_data(barplot, 'fig', '.png', 'barchart')
             if (len(pd.unique(self.df.source)) > 1):
-                print("\n\n")
                 heatplot = plotdata.plot_heat()
+                self.save_data(heatplot, 'fig', '.png', 'heatmap')
             else:
-                print("Only got a single blacklist feed. No overlap to display.")
-            if SAVE:
-                self.save_frame()
+                self.logger.info("Only got a single blacklist feed. No overlap to display.")
         else:
-            print("WARNING: Got empty data frame...")
-    
-        print('\nDone!\n\n')
+            self.logger.info("WARNING: Got empty data frame...")
 
 
 
@@ -343,18 +298,34 @@ def main():
     logging.basicConfig(level=logging.INFO, format='%(asctime)s  %(levelname)s:%(name)s: %(message)s', stream=sys.stdout)
     logger = logging.getLogger("main")
     logger.info("------------------++++++++BEGIN+++++++++++----------------------")
-    
-    getdata = GetData()
 
-    if GET_URLS:
-        logger.info("\n\n>>>> Fetching public inbound blacklisted IPv4 addresses from URLs <<<<\n")
-        df = getdata.get_url(inbound_urls_test)
+    readconf = ReadConf()
+    base =  readconf.retrieve('get', 'path','base')
+
+    inbound_prefetched = dict(readconf.retrieve('items', 'inbound_prefetched'))
+    inbound_prefetched_test = dict(readconf.retrieve('items', 'inbound_prefetched_test'))
+
+    inbound_urls = dict(readconf.retrieve('items', 'inbound_urls'))
+    inbound_urls_test = dict(readconf.retrieve('items', 'inbound_urls_test'))
+
+    DIR_OUTPUT_URL = home + base + readconf.retrieve('get', 'path','out_url')
+    DIR_OUTPUT_PREFETCHED = home + base + readconf.retrieve('get', 'path','out_prefetched')
+    DIR_INPUT_PREFETCHED = home + base + readconf.retrieve('get', 'path','in_prefetched') 
+
+    get_urls = readconf.retrieve('getboolean', 'bools', 'GET_URLS')
+    read_prefetched = readconf.retrieve('getboolean', 'bools','READ_PREFETCHED')
+
+    if get_urls:
+        logger.info(">>>> Fetching public inbound blacklisted IPv4 addresses from URLs <<<<")
+        df = GetData().get_url(inbound_urls)
         wrapitup = WrapItUp(df, DIR_OUTPUT_URL)
         
-    if READ_PREFETCH:
-        logger.info("\n\n>>>> Fetching private inbound blacklisted IPv4 addresses from disk <<<<\n")
-        df = getdata.get_prefetched(inbound_prefetched)
+    if read_prefetched:
+        logger.info(">>>> Fetching private inbound blacklisted IPv4 addresses from disk <<<<")
+        df = GetData().get_prefetched(inbound_prefetched, DIR_INPUT_PREFETCHED)
         wrapitup = WrapItUp(df, DIR_OUTPUT_PREFETCHED)
+        
+    logger.info('Done!\n\n')
 
 if __name__ == '__main__':
     main()
