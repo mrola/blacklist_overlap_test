@@ -6,25 +6,20 @@ import sys
 import time
 import socket
 import logging
-import platform
 import itertools
 import configparser
 import requests as req
 from os.path import expanduser
 
-import numpy as np
 import pandas as pd
 
 import seaborn as sns
-import matplotlib as mpl
-import matplotlib.cm as cm
 import matplotlib.pyplot as plt
-
 
 home = expanduser("~")
 
 # Path to config file
-path_config =  home + '/projs/blacklist_overlap_test/src/config/sifter.conf'
+path_config = home + '/projs/blacklist_overlap_test/src/config/sifter.conf'
 
 # Pandas - global display options
 pd.set_option('display.width', 120)
@@ -37,10 +32,13 @@ sns.set_palette("bone")
 
 
 class Common:
+    ''' Checking if date is set is done from multiple places so
+        putting the check in a separare class that may be inhereted by others. '''
+
     def set_date(self):
         DATE = ReadConf().retrieve('get', 'misc', 'DATE')
         if DATE:
-            return DATE 
+            return DATE
         else:
             return(time.strftime("%Y-%m-%d"))
 
@@ -56,6 +54,7 @@ class ReadConf():
             sys.exit('Failed to read conf. Abort.')
 
     def retrieve(self, method, section, key=None):
+        ''' Retrieves conf settings '''
         try:
             if method == 'get':
                 return self.confparse.get(section, key)
@@ -66,10 +65,11 @@ class ReadConf():
         except Exception as e:
             self.logger.error("Failed to access conf values: %s" % e)
 
+
 class GetData(Common):
     def __init__(self):
         self.logger = logging.getLogger("GetData")
-        self.cols = ["entity","type","direction","source","notes","date"]
+        self.cols = ["entity", "type", "direction", "source", "notes", "date"]
         self.df = pd.DataFrame(columns=self.cols)
         self.ipv4 = re.compile("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}")
 
@@ -81,32 +81,31 @@ class GetData(Common):
          "1.234.27.146","IPv4","inbound","http://malc0de.com/bl/IP_Blacklist.txt","","2016-01-27
          DATE is set to today, override this in Defaults section above if needed
         '''
+
         df_ips = pd.DataFrame()
         date = self.set_date()
 
         tup = (ips, 'IPv4', 'inbound', name, "", date)
-        (df_ips['entity'], df_ips['type'], df_ips['direction'], \
-             df_ips['source'], df_ips['notes'], df_ips['date']) = tup 
+        (df_ips['entity'], df_ips['type'], df_ips['direction'],
+         df_ips['source'], df_ips['notes'], df_ips['date']) = tup
         self.df = self.df.append(df_ips, ignore_index=True)
         return self.df
 
 
     def valid_ip(self, address):
-        '''
-        Checks if an IPv4 address is valid
-        '''
-        try: 
+        ''' Checks if an IPv4 address is valid '''
+
+        try:
             socket.inet_aton(address)
         except:
-            logger.warning("WARNING: Invalid address: %s" % address)
+            self.logger.warning("WARNING: Invalid address: %s" % address)
             return False
         return True
 
 
     def parse_content(self, source):
-        '''
-        Extract IPv4 address from a list of rows
-        '''
+        ''' Extract IPv4 address from a list of rows '''
+
         ips = []
         for line in source:
             m = re.search(self.ipv4, line.decode('utf-8'))
@@ -116,14 +115,13 @@ class GetData(Common):
                     ips.append(address)
         if ips:
             return ips
-        else: 
+        else:
             return False
 
 
     def get_url(self, urls):
-        '''
-        Fetch blacklist feeds from urls (as defined in inbound_urls)
-        '''
+        ''' Fetch blacklist feeds from urls (as defined in inbound_urls) '''
+
         fail_count = 0
         timeout = int(ReadConf().retrieve('get', 'misc', 'TIMEOUT'))
         for desc, url in iter(urls.items()):
@@ -139,7 +137,7 @@ class GetData(Common):
                         self.logger.warning(' WARNING: Found no valid ipv4 addresses.')
                 else:
                     self.logger.warning(' WARNING: Got status %d' % r.status_code)
-            except req.ConnectionError as e:            
+            except req.ConnectionError as e:
                 self.logger.error(' ERROR: Failed to fetch url due connectivity issues.')
                 self.logger.error(' Error msg: %s' % e)
                 fail_count += 1
@@ -153,18 +151,16 @@ class GetData(Common):
 
 
     def get_prefetched(self, files, indata_path):
-        '''
-        Read files defined in the "inbound_prefetched" dictionary.
-        '''
-        dflist = []
+        ''' Read files defined in the "inbound_prefetched" dictionary.  '''
+
         self.logger.info('Reading data:')
         for desc, filen in iter(files.items()):
             filen = indata_path + filen
-            if not os.path.exists(filen): 
-                self.logger.info(' WARNING: Failed to read data from: %s...' % filen) 
+            if not os.path.exists(filen):
+                self.logger.info(' WARNING: Failed to read data from: %s...' % filen)
             else:
-                try: 
-                    self.logger.info('%s...' % (filen)) 
+                try:
+                    self.logger.info('%s...' % (filen))
                     with open(filen, 'rb') as f:
                         ips = self.parse_content(f.readlines())
                         if ips:
@@ -185,17 +181,18 @@ class PlotData(Common):
 
     def fill_heatmap(self, cols, dfp, df_heat):
         '''
-        Calculate proportion of items in intersection between two blacklists to each blacklist per se. 
-         dfp: contains data for calculations. 
+        Calculate proportion of items in intersection between two blacklists to each blacklist per se.
+         dfp: contains data for calculations.
          df_heat: put results in this frame.
          cols: pair of columns (blacklists) used as input to calculations.
         '''
+
         s = dfp.eq(dfp[cols[0]], axis='index')[cols].all(1)
         common = s[s.values == True].count()
-    
+
         col0_sum = dfp[cols[0]].sum()
         col1_sum = dfp[cols[1]].sum()
-    
+
         df_heat[cols[0]].loc[cols[1]] = common/col0_sum
         df_heat[cols[1]].loc[cols[0]] = common/col1_sum
 
@@ -207,10 +204,12 @@ class PlotData(Common):
          df_heat: DataFrame that will contain the actual overlap values
          colpairs: list of 2-tuples where each tuple contains a unique pair of blacklists
         '''
+
         self.df['one'] = 1
         dfp = pd.pivot_table(self.df, values='one', index=['entity'], columns=['source'])
 
-        df_heat = pd.DataFrame({'contains': pd.unique(self.df.source), 'is contained': pd.unique(self.df.source)})
+        df_heat = pd.DataFrame({'contains': pd.unique(self.df.source),
+            'is contained': pd.unique(self.df.source)})
         df_heat['diag'] = 1
         df_heat = df_heat.pivot('contains','is contained', 'diag')
 
@@ -222,22 +221,27 @@ class PlotData(Common):
 
     def plot_counts(self):
         ''' Barchart showing size of each blacklist feed '''
+
         fig, ax = plt.subplots()
         sns.set(style="whitegrid", font_scale=1.1, rc={"figure.figsize": (14, 4)})
-        ax = sns.countplot(y="source", data=self.df.sort_index(axis=1, ascending=False), palette="bone");
-        ax.set(title="Barplot showing the count of entries per source - %s\n" % (self.set_date()));
+        ax = sns.countplot(y="source", data=self.df.sort_index(axis=1, 
+            ascending=False), palette="bone")
+        ax.set(title="Barplot showing the count of entries per source - %s\n" % 
+                (self.set_date()))
         return fig
 
 
     def plot_heat(self):
         ''' Heatmap showing the overlap between blacklist feeds '''
-        annotate = ReadConf().retrieve('getboolean', 'bools','ANNOTATE')
+
+        annotate = ReadConf().retrieve('getboolean', 'bools', 'ANNOTATE')
         df_heat = self.do_heatframes()
         fig, ax = plt.subplots()
-        ax = sns.heatmap(df_heat, linewidths=.5, annot=annotate, cmap="bone");    
-        ax.set(title="Overlap test - heatmap showing overlap between blacklists - %s\n" % (self.set_date()))
-        plt.xticks(rotation=40, horizontalalignment='right');
-        plt.yticks(rotation=0);
+        ax = sns.heatmap(df_heat, linewidths=.5, annot=annotate, cmap="bone")
+        ax.set(title="Overlap test - heatmap showing overlap between blacklists - %s\n" %
+               (self.set_date()))
+        plt.xticks(rotation=40, horizontalalignment='right')
+        plt.yticks(rotation=0)
         return fig
 
 
@@ -248,14 +252,18 @@ class WrapItUp(Common):
         self.path= dir_output
         self.doit()
 
-    def show_info(self):  
+    def show_info(self):
         ''' Print some info to verify result '''
-        self.logger.info('Verify we got all sources:\n%s\n' % pd.Series(pd.unique(self.df.source)))
+
+        self.logger.info('Verify we got all sources:\n%s\n' %
+                         pd.Series(pd.unique(self.df.source)))
         self.logger.info('First few frame rows:\n%s\n' % self.df.head())
-        self.logger.info('Frame contains %d entries.\n' % self.df.shape[0])   
+        self.logger.info('Frame contains %d entries.\n' % self.df.shape[0])
+
 
     def save_data(self, data, dtype, ext, desc):
         ''' Write to disk '''
+
         save = ReadConf().retrieve('getboolean', 'bools', 'SAVE')
         if save:
             date = self.set_date()
@@ -276,8 +284,8 @@ class WrapItUp(Common):
                 self.logger.error("ERROR: %s" % e)
 
     def doit(self):
-        '''
-        '''
+        ''' Delegates the main tasks '''
+
         if self.df.values.size > 0:
             self.show_info()
             self.save_data(self.df, 'frame', '.csv', 'raw')
@@ -293,14 +301,14 @@ class WrapItUp(Common):
             self.logger.info("WARNING: Got empty data frame...")
 
 
-
 def main():
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s  %(levelname)s:%(name)s: %(message)s', stream=sys.stdout)
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s  %(levelname)s:%(name)s: %(message)s', 
+            stream=sys.stdout)
     logger = logging.getLogger("main")
     logger.info("------------------++++++++BEGIN+++++++++++----------------------")
 
     readconf = ReadConf()
-    base =  readconf.retrieve('get', 'path','base')
+    base = readconf.retrieve('get', 'path','base')
 
     inbound_prefetched = dict(readconf.retrieve('items', 'inbound_prefetched'))
     inbound_prefetched_test = dict(readconf.retrieve('items', 'inbound_prefetched_test'))
@@ -308,23 +316,23 @@ def main():
     inbound_urls = dict(readconf.retrieve('items', 'inbound_urls'))
     inbound_urls_test = dict(readconf.retrieve('items', 'inbound_urls_test'))
 
-    DIR_OUTPUT_URL = home + base + readconf.retrieve('get', 'path','out_url')
-    DIR_OUTPUT_PREFETCHED = home + base + readconf.retrieve('get', 'path','out_prefetched')
-    DIR_INPUT_PREFETCHED = home + base + readconf.retrieve('get', 'path','in_prefetched') 
+    DIR_OUTPUT_URL = home + base + readconf.retrieve('get', 'path', 'out_url')
+    DIR_OUTPUT_PREFETCHED = home + base + readconf.retrieve('get',  'path', 'out_prefetched')
+    DIR_INPUT_PREFETCHED = home + base + readconf.retrieve('get', 'path', 'in_prefetched')
 
     get_urls = readconf.retrieve('getboolean', 'bools', 'GET_URLS')
-    read_prefetched = readconf.retrieve('getboolean', 'bools','READ_PREFETCHED')
+    read_prefetched = readconf.retrieve('getboolean', 'bools', 'READ_PREFETCHED')
 
     if get_urls:
         logger.info(">>>> Fetching public inbound blacklisted IPv4 addresses from URLs <<<<")
         df = GetData().get_url(inbound_urls)
-        wrapitup = WrapItUp(df, DIR_OUTPUT_URL)
-        
+        WrapItUp(df, DIR_OUTPUT_URL)
+
     if read_prefetched:
         logger.info(">>>> Fetching private inbound blacklisted IPv4 addresses from disk <<<<")
         df = GetData().get_prefetched(inbound_prefetched, DIR_INPUT_PREFETCHED)
-        wrapitup = WrapItUp(df, DIR_OUTPUT_PREFETCHED)
-        
+        WrapItUp(df, DIR_OUTPUT_PREFETCHED)
+
     logger.info('Done!\n\n')
 
 if __name__ == '__main__':
