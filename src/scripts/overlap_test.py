@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 import os
 import re
@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 home = expanduser("~")
 
 # Path to config file
-path_config = home + '/projs/blacklist_overlap_test/src/config/sifter.conf'
+path_config = home + '/projs/blacklist_overlap_test/src/config/overlap_test.conf'
 
 # Pandas - global display options
 pd.set_option('display.width', 120)
@@ -30,10 +30,14 @@ sns.set()
 sns.set(style="whitegrid", rc={"figure.figsize": (14, 8)})
 sns.set_palette("bone")
 
+# Suppress INFO log messages from requests lib
+logging.getLogger('requests').setLevel(logging.WARNING)
+
 
 class Common:
-    ''' Checking if date is set is done from multiple places so
-        putting the check in a separare class that may be inhereted by others. '''
+    """ Checking if date is set is done from multiple places so
+    putting the check in a separare class that may be inhereted by others. 
+    """
 
     def set_date(self):
         DATE = ReadConf().retrieve('get', 'misc', 'DATE')
@@ -54,7 +58,8 @@ class ReadConf():
             sys.exit('Failed to read conf. Abort.')
 
     def retrieve(self, method, section, key=None):
-        ''' Retrieves conf settings '''
+        """ Retrieves conf settings """
+
         try:
             if method == 'get':
                 return self.confparse.get(section, key)
@@ -74,13 +79,12 @@ class GetData(Common):
         self.ipv4 = re.compile("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}")
 
     def do_pandas(self, ips, name):
-        '''
-        Takes a list of IPv4 addresses as input and stores those in a Pandas DataFrame.
+        """ Takes a list of IPv4 addresses as input and stores those in a Pandas DataFrame.
          DataFrame columns: "entity","type","direction","source","notes","date"
 
          "1.234.27.146","IPv4","inbound","http://malc0de.com/bl/IP_Blacklist.txt","","2016-01-27
          DATE is set to today, override this in Defaults section above if needed
-        '''
+        """
 
         df_ips = pd.DataFrame()
         date = self.set_date()
@@ -93,18 +97,18 @@ class GetData(Common):
 
 
     def valid_ip(self, address):
-        ''' Checks if an IPv4 address is valid '''
+        """ Checks if an IPv4 address is valid """
 
         try:
             socket.inet_aton(address)
         except:
-            self.logger.warning("WARNING: Invalid address: %s" % address)
+            self.logger.warning("Invalid address: %s" % address)
             return False
         return True
 
 
     def parse_content(self, source):
-        ''' Extract IPv4 address from a list of rows '''
+        """ Extract IPv4 address from a list of rows """
 
         ips = []
         for line in source:
@@ -120,7 +124,7 @@ class GetData(Common):
 
 
     def get_url(self, urls):
-        ''' Fetch blacklist feeds from urls (as defined in inbound_urls) '''
+        """ Fetch blacklist feeds from urls (as defined in inbound_urls) """
 
         fail_count = 0
         timeout = int(ReadConf().retrieve('get', 'misc', 'TIMEOUT'))
@@ -134,30 +138,30 @@ class GetData(Common):
                     if ips:
                         self.df = self.do_pandas(ips, desc)
                     else:
-                        self.logger.warning(' WARNING: Found no valid ipv4 addresses.')
+                        self.logger.warning('Found no valid ipv4 addresses.')
                 else:
-                    self.logger.warning(' WARNING: Got status %d' % r.status_code)
+                    self.logger.warning('Got status %d' % r.status_code)
             except req.ConnectionError as e:
-                self.logger.error(' ERROR: Failed to fetch url due connectivity issues.')
-                self.logger.error(' Error msg: %s' % e)
+                self.logger.error('Failed to fetch url due connectivity issues.')
+                self.logger.error('Error msg: %s' % e)
                 fail_count += 1
                 if fail_count > 2:
                     self.logger.error('Connectivity issues assumed to be permanent. Will abort.')
                     break
             except Exception as e:
-                self.logger.error(' ERROR: Failed to fetch url: %s' % e)
+                self.logger.error('Failed to fetch url: %s' % e)
         return self.df
 
 
 
     def get_prefetched(self, files, indata_path):
-        ''' Read files defined in the "inbound_prefetched" dictionary.  '''
+        """ Read files defined in the inbound_prefetched dictionary.  """
 
-        self.logger.info('Reading data:')
+        self.logger.info('Reading data...')
         for desc, filen in iter(files.items()):
             filen = indata_path + filen
             if not os.path.exists(filen):
-                self.logger.info(' WARNING: Failed to read data from: %s...' % filen)
+                self.logger.info('Failed to read data from: %s...' % filen)
             else:
                 try:
                     self.logger.info('%s...' % (filen))
@@ -166,9 +170,9 @@ class GetData(Common):
                         if ips:
                             self.df = self.do_pandas(ips, desc)
                         else:
-                            self.logger.warning(' WARNING: Failed to find valid entries.')
+                            self.logger.warning('Failed to find valid entries.')
                 except Exception as e:
-                    self.logger.error(' ERROR: Caught exception: %s Abort...' % e)
+                    self.logger.error('Caught exception: %s Abort...' % e)
                     break
         return self.df
 
@@ -180,12 +184,12 @@ class PlotData(Common):
         self.df = df
 
     def fill_heatmap(self, cols, dfp, df_heat):
-        '''
-        Calculate proportion of items in intersection between two blacklists to each blacklist per se.
+        """ Calculate proportion of items in intersection between two blacklists to each blacklist per se.
+
          dfp: contains data for calculations.
          df_heat: put results in this frame.
          cols: pair of columns (blacklists) used as input to calculations.
-        '''
+        """
 
         s = dfp.eq(dfp[cols[0]], axis='index')[cols].all(1)
         common = s[s.values == True].count()
@@ -198,12 +202,12 @@ class PlotData(Common):
 
 
     def do_heatframes(self):
-        '''
-        Create frames used in calculation of overlap.
+        """ Create frames used in calculation of overlap.
+
          dfp: DataFrame with ipv4 as index and blacklist as columns. Used to find entries in common
          df_heat: DataFrame that will contain the actual overlap values
          colpairs: list of 2-tuples where each tuple contains a unique pair of blacklists
-        '''
+        """
 
         self.df['one'] = 1
         dfp = pd.pivot_table(self.df, values='one', index=['entity'], columns=['source'])
@@ -220,19 +224,19 @@ class PlotData(Common):
 
 
     def plot_counts(self):
-        ''' Barchart showing size of each blacklist feed '''
+        """ Barchart showing size of each blacklist feed """
 
         fig, ax = plt.subplots()
         sns.set(style="whitegrid", font_scale=1.1, rc={"figure.figsize": (14, 4)})
-        ax = sns.countplot(y="source", data=self.df.sort_index(axis=1, 
-            ascending=False), palette="bone")
-        ax.set(title="Barplot showing the count of entries per source - %s\n" % 
+        ax = sns.countplot(y="source", data=self.df.sort_index(axis=1,
+                            ascending=False), palette="bone")
+        ax.set(title="Barplot showing the count of entries per source - %s\n" %
                 (self.set_date()))
         return fig
 
 
     def plot_heat(self):
-        ''' Heatmap showing the overlap between blacklist feeds '''
+        """ Heatmap showing the overlap between blacklist feeds """
 
         annotate = ReadConf().retrieve('getboolean', 'bools', 'ANNOTATE')
         df_heat = self.do_heatframes()
@@ -253,7 +257,7 @@ class WrapItUp(Common):
         self.doit()
 
     def show_info(self):
-        ''' Print some info to verify result '''
+        """ Print some info to verify result """
 
         self.logger.info('Verify we got all sources:\n%s\n' %
                          pd.Series(pd.unique(self.df.source)))
@@ -262,7 +266,7 @@ class WrapItUp(Common):
 
 
     def save_data(self, data, dtype, ext, desc):
-        ''' Write to disk '''
+        """ Write to disk """
 
         save = ReadConf().retrieve('getboolean', 'bools', 'SAVE')
         if save:
@@ -281,10 +285,10 @@ class WrapItUp(Common):
                     data.savefig(savepath, bbox_inches='tight', pad_inches=1)
                 self.logger.info("Successfully saved data to: %s" % savepath)
             except Exception as e:
-                self.logger.error("ERROR: %s" % e)
+                self.logger.error("%s" % e)
 
     def doit(self):
-        ''' Delegates the main tasks '''
+        """ Delegates the main tasks """
 
         if self.df.values.size > 0:
             self.show_info()
@@ -298,11 +302,11 @@ class WrapItUp(Common):
             else:
                 self.logger.info("Only got a single blacklist feed. No overlap to display.")
         else:
-            self.logger.info("WARNING: Got empty data frame...")
+            self.logger.info("Got empty data frame...")
 
 
 def main():
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s  %(levelname)s:%(name)s: %(message)s', 
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s  %(levelname)s:%(name)s: %(message)s',
             stream=sys.stdout)
     logger = logging.getLogger("main")
     logger.info("------------------++++++++BEGIN+++++++++++----------------------")
@@ -317,7 +321,7 @@ def main():
     inbound_urls_test = dict(readconf.retrieve('items', 'inbound_urls_test'))
 
     DIR_OUTPUT_URL = home + base + readconf.retrieve('get', 'path', 'out_url')
-    DIR_OUTPUT_PREFETCHED = home + base + readconf.retrieve('get',  'path', 'out_prefetched')
+    DIR_OUTPUT_PREFETCHED = home + base + readconf.retrieve('get', 'path', 'out_prefetched')
     DIR_INPUT_PREFETCHED = home + base + readconf.retrieve('get', 'path', 'in_prefetched')
 
     get_urls = readconf.retrieve('getboolean', 'bools', 'GET_URLS')
