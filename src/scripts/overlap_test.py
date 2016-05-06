@@ -208,7 +208,7 @@ class PlotData(Common):
          colpairs: list of 2-tuples where each tuple contains a unique pair of blacklists
         """
 
-        logger.info("Doing heatmap calculations...")
+        self.logger.info("Doing heatmap calculations...")
         self.df['one'] = 1
         dfp = pd.pivot_table(self.df, values='one', index=['entity'], columns=['source'])
 
