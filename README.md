@@ -1,6 +1,14 @@
 # Blacklist overlap test
 The blacklist overlap test provides a measure on the degree to which one feed is contained within some other feed. It is a metric that may be used to exclude blacklist feeds that is already contained in other feeds.
 
+This project is inspired by the combine and tiq-test project (written in R) by @alexpc, @krmaxwell and others. While the tiq-test project provides additional quality metrics and also supports enrichment, this notebook is pure Python and at this point only provides the overlap test.
+
+References:
+- https://github.com/mlsecproject/combine
+- https://github.com/mlsecproject/tiq-test
+- http://rpubs.com/alexcpsec/tiq-test-Winter2015
+
+
 ## Purpose
 The purpose of this Jupyter notebook is to provide a measure on the degree to which blacklists overlap in terms of IPv4 entries. The notebook extract IPv4 addresses from public and private blacklists and then provides a barchart showing sizes per blacklist and a heatmap showing the degree of overlap between the blacklists. The notebook also supports importing blacklists from the local filesystem.
 
@@ -35,6 +43,8 @@ Setting ANNOTATE to *True* or *False* determines whether the actual value are sh
 ## <a name="standalone"></a>Standalone .py version
 A partial output from the execution of the standalone version is shown below. The only differences to the notebook versions are the possibility to save the plots to disk and that the config is located in a separate file.
 
+### Usage
+
 <pre>
 lx3:ola 22:44 ~/projs/blacklist_overlap_test/src/scripts master > python overlap_test.py 
 2016-05-05 22:44:31,995  INFO:main: ------------------++++++++BEGIN+++++++++++----------------------
@@ -50,9 +60,9 @@ lx3:ola 22:44 ~/projs/blacklist_overlap_test/src/scripts master > python overlap
 2016-05-05 22:44:43,558  INFO:GetData: Fetching: https://feodotracker.abuse.ch/blocklist/?download=badips
 2016-05-05 22:44:45,395  INFO:GetData: Got status 200 back...
 2016-05-05 22:44:45,396  WARNING:GetData: Found no valid ipv4 addresses.
+...
+...
 
-...
-...
 
 2016-05-05 22:44:45,431  INFO:WrapItUp: Verify we got all sources:
 0     malc0de_ip_blacklist.txt      
@@ -80,6 +90,38 @@ dtype: object
 
 </pre>
 
+### Configuration
+Configuration options are found in src/config/overlap_test.conf.
+
+- `SAVE`- If True, save data to dirs defined in [path] section.
+- `GET_URLS`- If True, fetch data from public sources defined in [inbound_urls] section.
+- `READ_PREFETCHED`- If True, fetch data from local filesystem as defined in [path] and [inbound_prefetched] sections.
+- `ANNOTATE`- If True, show actual value in each cell of heatmap.
+
+- `DATE`- Set if you don't want today as date, format "YYYY-MM-DD".
+- `TIMEOUT` - number of seconds Requests will wait for a response from the server (both connect and between reads).
+
+- `path`
+    - `out_url` - path to save .csv and .png when processing public sources.
+    - `out_prefetched`  - path to save .csv and .png when processing local filesystem sources.
+    - `in_prefetched`- path to input files when processing local filesystem sources.
+
+
+- `inbound_urls`- Key: Description of source. Value: URL to be fetched.
+<pre>
+   malwaredomainlist_ip.txt =              http://www.malwaredomainlist.com/hostslist/ip.txt
+   malc0de_IP_Blacklist.txt =              http://malc0de.com/bl/IP_Blacklist.txt 
+   ...
+</pre>
+
+- `inbound_prefetched`- Key: Description of source. Value: file to be read.
+<pre>
+   compromised-ips =                   compromised-ips.ioc
+   ips  =                              ips.ioc 
+   ...
+</pre>
+
+
 ## Requirements
 
 * Python >= 2.7 <small>(tested with 2.7 and 3.4)</small>
@@ -93,7 +135,7 @@ dtype: object
     * http://docs.python-requests.org/en/latest/
     * https://github.com/kennethreitz/requests
 
-For the standalone version, the confiparser package is required as well.
+For the standalone version, the configparser package is required as well.
 
 ----
 If the above requirements are not met then installing miniconda is probably the simplest and fastest way to get ahead. Conda will allow you to create a local "environment" that contains all the necessary packages with all dependencies met without interfering with any global Python installation
