@@ -1,0 +1,10 @@
+entity,type,direction,source,notes,date
+1.178.179.217,IPv4,inbound,emergingthreats_emerging-Block-IPs.txt,,2015-02-03
+1.179.170.7,IPv4,inbound,emergingthreats_emerging-Block-IPs.txt,,2015-02-03
+1.93.0.224,IPv4,inbound,emergingthreats_emerging-Block-IPs.txt,,2015-02-03
+103.16.26.228,IPv4,inbound,emergingthreats_emerging-Block-IPs.txt,,2015-02-03
+103.16.26.36,IPv4,inbound,emergingthreats_emerging-Block-IPs.txt,,2015-02-03
+103.224.83.130,IPv4,inbound,emergingthreats_emerging-Block-IPs.txt,,2015-02-03
+103.228.200.37,IPv4,inbound,emergingthreats_emerging-Block-IPs.txt,,2015-02-03
+103.228.200.44,IPv4,inbound,emergingthreats_emerging-Block-IPs.txt,,2015-02-03
+103.23.154.184,IPv4,inbound,emergingthreats_emerging-Block-IPs.txt,,2015-02-03

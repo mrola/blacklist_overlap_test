@@ -9,17 +9,16 @@ import logging
 import itertools
 import configparser
 import requests as req
-from os.path import expanduser
 
 import pandas as pd
 
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-home = expanduser("~")
-
 # Path to config file
-path_config = home + '/projs/blacklist_overlap_test/src/config/overlap_test.conf'
+path_script = sys.path[0]
+path_config = path_script + '/../config/overlap_test.conf'
+datadir = path_script + '/../../data/'
 
 # Pandas - global display options
 pd.set_option('display.width', 120)
@@ -184,7 +183,7 @@ class PlotData(Common):
         self.df = df
 
     def fill_heatmap(self, cols, dfp, df_heat):
-        """ Calculate proportion of items in intersection between two blacklists to each blacklist per se.
+        """ Calculate proportion of items in intersection between two blacklists to each blacklist.
 
          dfp: contains data for calculations.
          df_heat: put results in this frame.
@@ -204,16 +203,17 @@ class PlotData(Common):
     def do_heatframes(self):
         """ Create frames used in calculation of overlap.
 
-         dfp: DataFrame with ipv4 as index and blacklist as columns. Used to find entries in common
+         dfp: DataFrame with ipv4 as index and name of blacklists as columns. Used to find entries in common
          df_heat: DataFrame that will contain the actual overlap values
          colpairs: list of 2-tuples where each tuple contains a unique pair of blacklists
         """
 
+        logger.info("Doing heatmap calculations...")
         self.df['one'] = 1
         dfp = pd.pivot_table(self.df, values='one', index=['entity'], columns=['source'])
 
         df_heat = pd.DataFrame({'contains': pd.unique(self.df.source),
-            'is contained': pd.unique(self.df.source)})
+                                'is contained': pd.unique(self.df.source)})
         df_heat['diag'] = 1
         df_heat = df_heat.pivot('contains','is contained', 'diag')
 
@@ -312,7 +312,6 @@ def main():
     logger.info("------------------++++++++BEGIN+++++++++++----------------------")
 
     readconf = ReadConf()
-    base = readconf.retrieve('get', 'path','base')
 
     inbound_prefetched = dict(readconf.retrieve('items', 'inbound_prefetched'))
     inbound_prefetched_test = dict(readconf.retrieve('items', 'inbound_prefetched_test'))
@@ -320,9 +319,9 @@ def main():
     inbound_urls = dict(readconf.retrieve('items', 'inbound_urls'))
     inbound_urls_test = dict(readconf.retrieve('items', 'inbound_urls_test'))
 
-    DIR_OUTPUT_URL = home + base + readconf.retrieve('get', 'path', 'out_url')
-    DIR_OUTPUT_PREFETCHED = home + base + readconf.retrieve('get', 'path', 'out_prefetched')
-    DIR_INPUT_PREFETCHED = home + base + readconf.retrieve('get', 'path', 'in_prefetched')
+    DIR_OUTPUT_URL = datadir + readconf.retrieve('get', 'path', 'out_url')
+    DIR_OUTPUT_PREFETCHED = datadir + readconf.retrieve('get', 'path', 'out_prefetched')
+    DIR_INPUT_PREFETCHED = datadir + readconf.retrieve('get', 'path', 'in_prefetched')
 
     get_urls = readconf.retrieve('getboolean', 'bools', 'GET_URLS')
     read_prefetched = readconf.retrieve('getboolean', 'bools', 'READ_PREFETCHED')

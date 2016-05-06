@@ -1,11 +1,14 @@
 *.py[cod]
 
 # cache files
-.swp
-.ipynb_checkpoints
+*.swp
+*.ipynb_checkpoints
+*.ioc
+*.csv
+*.png
 
 # misc
 notes.txt
 
 # notebook data
-data/
+#data/
