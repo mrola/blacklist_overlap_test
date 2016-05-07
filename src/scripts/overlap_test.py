@@ -46,15 +46,16 @@ class Common:
             return(time.strftime("%Y-%m-%d"))
 
 
-class ReadConf():
+class ReadConf:
     def __init__(self):
         self.logger = logging.getLogger("ReadConf")
-        self.confparse = configparser.ConfigParser(delimiters=['='])
+        self.confparse = configparser.ConfigParser(allow_no_value=True, delimiters=['='])
         try:
             self.confparse.read(path_config)
         except Exception as e:
             self.logger.error("Failed attempt to read config at %s: %s" % (path_config, e))
-            sys.exit('Failed to read conf. Abort.')
+            sys.exit('Abort!')
+
 
     def retrieve(self, method, section, key=None):
         """ Retrieves conf settings """
@@ -68,6 +69,7 @@ class ReadConf():
                 return self.confparse.getboolean(section, key)
         except Exception as e:
             self.logger.error("Failed to access conf values: %s" % e)
+            sys.exit('Abort!')
 
 
 class GetData(Common):
@@ -76,6 +78,7 @@ class GetData(Common):
         self.cols = ["entity", "type", "direction", "source", "notes", "date"]
         self.df = pd.DataFrame(columns=self.cols)
         self.ipv4 = re.compile("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}")
+        self.readconf = ReadConf()
 
     def do_pandas(self, ips, name):
         """ Takes a list of IPv4 addresses as input and stores those in a Pandas DataFrame.
@@ -126,13 +129,13 @@ class GetData(Common):
         """ Fetch blacklist feeds from urls (as defined in inbound_urls) """
 
         fail_count = 0
-        timeout = int(ReadConf().retrieve('get', 'misc', 'TIMEOUT'))
+        timeout = int(self.readconf.retrieve('get', 'misc', 'TIMEOUT'))
         for desc, url in iter(urls.items()):
             self.logger.info('Fetching: %s' % url)
             try:
                 r = req.get(url, timeout=timeout)
                 if r.status_code == 200:
-                    self.logger.info('Got status 200 back...')
+                    self.logger.debug('Got status 200 back...')
                     ips = self.parse_content(r.content.splitlines())
                     if ips:
                         self.df = self.do_pandas(ips, desc)
@@ -181,6 +184,7 @@ class PlotData(Common):
     def __init__(self, df):
         self.logger = logging.getLogger("PlotData")
         self.df = df
+        self.readconf = ReadConf()
 
     def fill_heatmap(self, cols, dfp, df_heat):
         """ Calculate proportion of items in intersection between two blacklists to each blacklist.
@@ -238,7 +242,7 @@ class PlotData(Common):
     def plot_heat(self):
         """ Heatmap showing the overlap between blacklist feeds """
 
-        annotate = ReadConf().retrieve('getboolean', 'bools', 'ANNOTATE')
+        annotate = self.readconf.retrieve('getboolean', 'bools', 'ANNOTATE')
         df_heat = self.do_heatframes()
         fig, ax = plt.subplots()
         ax = sns.heatmap(df_heat, linewidths=.5, annot=annotate, cmap="bone")
@@ -254,6 +258,7 @@ class WrapItUp(Common):
         self.logger = logging.getLogger("WrapItUp")
         self.df = df
         self.path= dir_output
+        self.readconf = ReadConf()
         self.doit()
 
     def show_info(self):
@@ -268,7 +273,7 @@ class WrapItUp(Common):
     def save_data(self, data, dtype, ext, desc):
         """ Write to disk """
 
-        save = ReadConf().retrieve('getboolean', 'bools', 'SAVE')
+        save = self.readconf.retrieve('getboolean', 'bools', 'SAVE')
         if save:
             date = self.set_date()
             udate = date.replace('-', '')
