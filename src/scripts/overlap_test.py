@@ -73,12 +73,21 @@ class ReadConf:
 
 
 class GetData(Common):
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.logger = logging.getLogger("GetData")
+        self.readconf = ReadConf()
         self.cols = ["entity", "type", "direction", "source", "notes", "date"]
         self.df = pd.DataFrame(columns=self.cols)
         self.ipv4 = re.compile("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}")
-        self.readconf = ReadConf()
+
+        if kwargs.get('do_url') is True:
+            self.urls = kwargs.get('inbound_urls')
+            self.df = self.get_url(self.urls)
+        if kwargs.get('do_prefetched') is True:
+            self.inbound = kwargs.get('inbound_prefetched')
+            self.indata_path = kwargs.get('indata_path')
+            self.df = self.get_prefetched(self.inbound, self.indata_path)
+
 
     def do_pandas(self, ips, name):
         """ Takes a list of IPv4 addresses as input and stores those in a Pandas DataFrame.
@@ -128,6 +137,7 @@ class GetData(Common):
     def get_url(self, urls):
         """ Fetch blacklist feeds from urls (as defined in inbound_urls) """
 
+        self.logger.info(">>>> Fetching public inbound blacklisted IPv4 addresses from URLs <<<<")
         fail_count = 0
         timeout = int(self.readconf.retrieve('get', 'misc', 'TIMEOUT'))
         for desc, url in iter(urls.items()):
@@ -159,6 +169,7 @@ class GetData(Common):
     def get_prefetched(self, files, indata_path):
         """ Read files defined in the inbound_prefetched dictionary.  """
 
+        self.logger.info(">>>> Fetching private inbound blacklisted IPv4 addresses from disk <<<<")
         self.logger.info('Reading data...')
         for desc, filen in iter(files.items()):
             filen = indata_path + filen
@@ -257,7 +268,7 @@ class WrapItUp(Common):
     def __init__(self, df, dir_output):
         self.logger = logging.getLogger("WrapItUp")
         self.df = df
-        self.path= dir_output
+        self.path = dir_output
         self.readconf = ReadConf()
         self.doit()
 
@@ -307,7 +318,7 @@ class WrapItUp(Common):
             else:
                 self.logger.info("Only got a single blacklist feed. No overlap to display.")
         else:
-            self.logger.info("Got empty data frame...")
+            self.logger.info("Got empty data frame...\n")
 
 
 def main():
@@ -328,18 +339,14 @@ def main():
     DIR_OUTPUT_PREFETCHED = datadir + readconf.retrieve('get', 'path', 'out_prefetched')
     DIR_INPUT_PREFETCHED = datadir + readconf.retrieve('get', 'path', 'in_prefetched')
 
-    get_urls = readconf.retrieve('getboolean', 'bools', 'GET_URLS')
-    read_prefetched = readconf.retrieve('getboolean', 'bools', 'READ_PREFETCHED')
+    do_url = readconf.retrieve('getboolean', 'bools', 'GET_URLS')
+    do_prefetched = readconf.retrieve('getboolean', 'bools', 'READ_PREFETCHED')
 
-    if get_urls:
-        logger.info(">>>> Fetching public inbound blacklisted IPv4 addresses from URLs <<<<")
-        df = GetData().get_url(inbound_urls)
-        WrapItUp(df, DIR_OUTPUT_URL)
+    getdata = GetData(do_url = do_url, inbound_urls = inbound_urls)
+    WrapItUp(getdata.df, DIR_OUTPUT_URL)
 
-    if read_prefetched:
-        logger.info(">>>> Fetching private inbound blacklisted IPv4 addresses from disk <<<<")
-        df = GetData().get_prefetched(inbound_prefetched, DIR_INPUT_PREFETCHED)
-        WrapItUp(df, DIR_OUTPUT_PREFETCHED)
+    getdata = GetData(do_prefetched=do_prefetched, inbound_prefetched=inbound_prefetched, indata_path=DIR_INPUT_PREFETCHED)
+    WrapItUp(getdata.df, DIR_OUTPUT_PREFETCHED)
 
     logger.info('Done!\n\n')
 
