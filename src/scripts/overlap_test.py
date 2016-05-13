@@ -2,7 +2,7 @@
 
 import os
 import re
-import sys
+import sys 
 import time
 import socket
 import logging
@@ -75,26 +75,38 @@ class ReadConf:
 class GetData(Common):
     def __init__(self, **kwargs):
         self.logger = logging.getLogger("GetData")
-        self.readconf = ReadConf()
         self.cols = ["entity", "type", "direction", "source", "notes", "date"]
         self.df = pd.DataFrame(columns=self.cols)
         self.ipv4 = re.compile("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}")
 
-        if kwargs.get('do_url') is True:
-            self.urls = kwargs.get('inbound_urls')
-            self.df = self.get_url(self.urls)
-        if kwargs.get('do_prefetched') is True:
-            self.inbound = kwargs.get('inbound_prefetched')
-            self.indata_path = kwargs.get('indata_path')
-            self.df = self.get_prefetched(self.inbound, self.indata_path)
+        self.readconf = ReadConf()
+        self.TEST = self.readconf.retrieve('getboolean', 'bools', 'TEST')
+        self.do_url = kwargs.get('do_url') 
+        self.do_prefetched = kwargs.get('do_prefetched')
+        self.getdata()
 
+    def getdata(self):
+        """ Fetches dict with url:s or files from conf and calls get_url() or get_prefetched(). """
+
+        if self.do_url is True:
+            self.inbound_urls = dict(self.readconf.retrieve('items', 'inbound_urls'))
+            if self.TEST is True:
+                self.inbound_urls = dict(self.readconf.retrieve('items', 'inbound_urls_test'))
+            self.df = self.get_url(self.inbound_urls)
+
+        if self.do_prefetched is True:
+            self.inbound_prefetched = dict(self.readconf.retrieve('items', 'inbound_prefetched'))
+            if self.TEST is True:
+                self.inbound_prefetched = dict(self.readconf.retrieve('items', 'inbound_prefetched_test'))
+            self.indata_path = datadir + self.readconf.retrieve('get', 'path', 'in_prefetched')
+            self.df = self.get_prefetched(self.inbound_prefetched, self.indata_path)
 
     def do_pandas(self, ips, name):
         """ Takes a list of IPv4 addresses as input and stores those in a Pandas DataFrame.
          DataFrame columns: "entity","type","direction","source","notes","date"
 
          "1.234.27.146","IPv4","inbound","http://malc0de.com/bl/IP_Blacklist.txt","","2016-01-27
-         DATE is set to today, override this in Defaults section above if needed
+         DATE is set to today, override this in config if needed.
         """
 
         df_ips = pd.DataFrame()
@@ -265,10 +277,10 @@ class PlotData(Common):
 
 
 class WrapItUp(Common):
-    def __init__(self, df, dir_output):
+    def __init__(self, df, path_output):
         self.logger = logging.getLogger("WrapItUp")
         self.df = df
-        self.path = dir_output
+        self.path = path_output
         self.readconf = ReadConf()
         self.doit()
 
@@ -284,8 +296,8 @@ class WrapItUp(Common):
     def save_data(self, data, dtype, ext, desc):
         """ Write to disk """
 
-        save = self.readconf.retrieve('getboolean', 'bools', 'SAVE')
-        if save:
+        self.save = self.readconf.retrieve('getboolean', 'bools', 'SAVE')
+        if self.save:
             date = self.set_date()
             udate = date.replace('-', '')
             savepath = self.path + desc + '_' + udate + ext
@@ -329,24 +341,17 @@ def main():
 
     readconf = ReadConf()
 
-    inbound_prefetched = dict(readconf.retrieve('items', 'inbound_prefetched'))
-    inbound_prefetched_test = dict(readconf.retrieve('items', 'inbound_prefetched_test'))
-
-    inbound_urls = dict(readconf.retrieve('items', 'inbound_urls'))
-    inbound_urls_test = dict(readconf.retrieve('items', 'inbound_urls_test'))
-
-    DIR_OUTPUT_URL = datadir + readconf.retrieve('get', 'path', 'out_url')
-    DIR_OUTPUT_PREFETCHED = datadir + readconf.retrieve('get', 'path', 'out_prefetched')
-    DIR_INPUT_PREFETCHED = datadir + readconf.retrieve('get', 'path', 'in_prefetched')
+    path_output_url = datadir + readconf.retrieve('get', 'path', 'out_url')
+    path_output_prefetched = datadir + readconf.retrieve('get', 'path', 'out_prefetched')
 
     do_url = readconf.retrieve('getboolean', 'bools', 'GET_URLS')
     do_prefetched = readconf.retrieve('getboolean', 'bools', 'READ_PREFETCHED')
 
-    getdata = GetData(do_url = do_url, inbound_urls = inbound_urls)
-    WrapItUp(getdata.df, DIR_OUTPUT_URL)
+    gd = GetData(do_url = do_url)
+    WrapItUp(gd.df, path_output_url)
 
-    getdata = GetData(do_prefetched=do_prefetched, inbound_prefetched=inbound_prefetched, indata_path=DIR_INPUT_PREFETCHED)
-    WrapItUp(getdata.df, DIR_OUTPUT_PREFETCHED)
+    gd = GetData(do_prefetched = do_prefetched)
+    WrapItUp(gd.df, path_output_prefetched)
 
     logger.info('Done!\n\n')
 
