@@ -26,8 +26,8 @@ pd.set_option('max_colwidth', 0)
 
 # Seaborn - plot options
 sns.set()
-sns.set(style="whitegrid", rc={"figure.figsize": (14, 8)})
-sns.set_palette("bone")
+sns.set(style='whitegrid', rc={'figure.figsize': (14, 8)})
+sns.set_palette('bone')
 
 # Suppress INFO log messages from requests lib
 logging.getLogger('requests').setLevel(logging.WARNING)
@@ -43,17 +43,17 @@ class Common:
         if DATE:
             return DATE
         else:
-            return(time.strftime("%Y-%m-%d"))
+            return(time.strftime('%Y-%m-%d'))
 
 
 class ReadConf:
     def __init__(self):
-        self.logger = logging.getLogger("ReadConf")
+        self.logger = logging.getLogger('ReadConf')
         self.confparse = configparser.ConfigParser(allow_no_value=True, delimiters=['='])
         try:
             self.confparse.read(path_config)
         except Exception as e:
-            self.logger.error("Failed attempt to read config at %s: %s" % (path_config, e))
+            self.logger.error('Failed attempt to read config at %s: %s' % (path_config, e))
             sys.exit('Abort!')
 
 
@@ -68,16 +68,16 @@ class ReadConf:
             elif method == 'getboolean':
                 return self.confparse.getboolean(section, key)
         except Exception as e:
-            self.logger.error("Failed to access conf values: %s" % e)
+            self.logger.error('Failed to access conf values: %s' % e)
             sys.exit('Abort!')
 
 
 class GetData(Common):
     def __init__(self, **kwargs):
-        self.logger = logging.getLogger("GetData")
-        self.cols = ["entity", "type", "direction", "source", "notes", "date"]
+        self.logger = logging.getLogger('GetData')
+        self.cols = ['entity', 'type', 'direction', 'source', 'notes', 'date']
         self.df = pd.DataFrame(columns=self.cols)
-        self.ipv4 = re.compile("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}")
+        self.ipv4 = re.compile('\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}')
 
         self.readconf = ReadConf()
         self.TEST = self.readconf.retrieve('getboolean', 'bools', 'TEST')
@@ -103,16 +103,16 @@ class GetData(Common):
 
     def do_pandas(self, ips, name):
         """ Takes a list of IPv4 addresses as input and stores those in a Pandas DataFrame.
-         DataFrame columns: "entity","type","direction","source","notes","date"
+         DataFrame columns: 'entity','type','direction','source','notes','date'
 
-         "1.234.27.146","IPv4","inbound","http://malc0de.com/bl/IP_Blacklist.txt","","2016-01-27
+         '1.234.27.146','IPv4','inbound','http://malc0de.com/bl/IP_Blacklist.txt','','2016-01-27
          DATE is set to today, override this in config if needed.
         """
 
         df_ips = pd.DataFrame()
         date = self.set_date()
 
-        tup = (ips, 'IPv4', 'inbound', name, "", date)
+        tup = (ips, 'IPv4', 'inbound', name, '', date)
         (df_ips['entity'], df_ips['type'], df_ips['direction'],
          df_ips['source'], df_ips['notes'], df_ips['date']) = tup
         self.df = self.df.append(df_ips, ignore_index=True)
@@ -125,7 +125,7 @@ class GetData(Common):
         try:
             socket.inet_aton(address)
         except:
-            self.logger.warning("Invalid address: %s" % address)
+            self.logger.warning('Invalid address: %s' % address)
             return False
         return True
 
@@ -149,7 +149,7 @@ class GetData(Common):
     def get_url(self, urls):
         """ Fetch blacklist feeds from urls (as defined in inbound_urls) """
 
-        self.logger.info(">>>> Fetching public inbound blacklisted IPv4 addresses from URLs <<<<")
+        self.logger.info('>>>> Fetching public inbound blacklisted IPv4 addresses from URLs <<<<')
         fail_count = 0
         timeout = int(self.readconf.retrieve('get', 'misc', 'TIMEOUT'))
         for desc, url in iter(urls.items()):
@@ -181,15 +181,15 @@ class GetData(Common):
     def get_prefetched(self, files, indata_path):
         """ Read files defined in the inbound_prefetched dictionary.  """
 
-        self.logger.info(">>>> Fetching private inbound blacklisted IPv4 addresses from disk <<<<")
+        self.logger.info('>>>> Fetching private inbound blacklisted IPv4 addresses from disk <<<<')
         self.logger.info('Reading data...')
         for desc, filen in iter(files.items()):
-            filen = indata_path + filen
+            filen = os.path.join(indata_path, filen)
             if not os.path.exists(filen):
-                self.logger.info('Failed to read data from: %s...' % filen)
+                self.logger.info('Failed to read data from: %s' % os.path.relpath(filen))
             else:
                 try:
-                    self.logger.info('%s...' % (filen))
+                    self.logger.info('%s...' % (os.path.relpath(filen)))
                     with open(filen, 'rb') as f:
                         ips = self.parse_content(f.readlines())
                         if ips:
@@ -205,7 +205,7 @@ class GetData(Common):
 
 class PlotData(Common):
     def __init__(self, df):
-        self.logger = logging.getLogger("PlotData")
+        self.logger = logging.getLogger('PlotData')
         self.df = df
         self.readconf = ReadConf()
 
@@ -235,7 +235,7 @@ class PlotData(Common):
          colpairs: list of 2-tuples where each tuple contains a unique pair of blacklists
         """
 
-        self.logger.info("Doing heatmap calculations...")
+        self.logger.info('Doing heatmap calculations...')
         self.df['one'] = 1
         dfp = pd.pivot_table(self.df, values='one', index=['entity'], columns=['source'])
 
@@ -254,10 +254,10 @@ class PlotData(Common):
         """ Barchart showing size of each blacklist feed """
 
         fig, ax = plt.subplots()
-        sns.set(style="whitegrid", font_scale=1.1, rc={"figure.figsize": (14, 4)})
-        ax = sns.countplot(y="source", data=self.df.sort_index(axis=1,
-                            ascending=False), palette="bone")
-        ax.set(title="Barplot showing the count of entries per source - %s\n" %
+        sns.set(style='whitegrid', font_scale=1.1, rc={'figure.figsize': (14, 4)})
+        ax = sns.countplot(y='source', data=self.df.sort_index(axis=1,
+                            ascending=False), palette='bone')
+        ax.set(title='Barplot showing the count of entries per source - %s\n' %
                 (self.set_date()))
         return fig
 
@@ -268,8 +268,8 @@ class PlotData(Common):
         annotate = self.readconf.retrieve('getboolean', 'bools', 'ANNOTATE')
         df_heat = self.do_heatframes()
         fig, ax = plt.subplots()
-        ax = sns.heatmap(df_heat, linewidths=.5, annot=annotate, cmap="bone")
-        ax.set(title="Overlap test - heatmap showing overlap between blacklists - %s\n" %
+        ax = sns.heatmap(df_heat, linewidths=.5, annot=annotate, cmap='bone')
+        ax.set(title='Overlap test - heatmap showing overlap between blacklists - %s\n' %
                (self.set_date()))
         plt.xticks(rotation=40, horizontalalignment='right')
         plt.yticks(rotation=0)
@@ -278,7 +278,7 @@ class PlotData(Common):
 
 class WrapItUp(Common):
     def __init__(self, df, path_output):
-        self.logger = logging.getLogger("WrapItUp")
+        self.logger = logging.getLogger('WrapItUp')
         self.df = df
         self.path = path_output
         self.readconf = ReadConf()
@@ -300,20 +300,20 @@ class WrapItUp(Common):
         if self.save:
             date = self.set_date()
             udate = date.replace('-', '')
-            savepath = self.path + desc + '_' + udate + ext
+            savepath = os.path.join(self.path, desc + '_' + udate + ext)
             if not os.path.exists(self.path):
-                self.logger.warning("Failed to find path: %s" % self.path)
-                self.logger.warning("Setting path to '/tmp/'")
-                savepath = '/tmp/' + desc + '_' + udate + ext
-            self.logger.debug("Attempting to save data...")
+                self.logger.warning('Failed to find path: %s' % self.path)
+                self.logger.warning('Setting path to '/tmp/'')
+                savepath = os.path.join('/tmp/', desc + '_' + udate + ext)
+            self.logger.debug('Attempting to save data...')
             try:
                 if dtype == 'frame':
                     self.df.to_csv(savepath, index=False)
                 if dtype == 'fig':
                     data.savefig(savepath, bbox_inches='tight', pad_inches=1)
-                self.logger.info("Successfully saved data to: %s" % savepath)
+                self.logger.info('Successfully saved data to: %s' % os.path.relpath(savepath))
             except Exception as e:
-                self.logger.error("%s" % e)
+                self.logger.error('%s' % e)
 
     def doit(self):
         """ Delegates the main tasks """
@@ -328,18 +328,22 @@ class WrapItUp(Common):
                 heatplot = plotdata.plot_heat()
                 self.save_data(heatplot, 'fig', '.png', 'heatmap')
             else:
-                self.logger.info("Only got a single blacklist feed. No overlap to display.")
+                self.logger.info('Only got a single blacklist feed. No overlap to display.')
         else:
-            self.logger.info("Got empty data frame...\n")
+            self.logger.info('Got empty data frame...\n')
 
 
 def main():
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s  %(levelname)s:%(name)s: %(message)s',
-            stream=sys.stdout)
-    logger = logging.getLogger("main")
-    logger.info("------------------++++++++BEGIN+++++++++++----------------------")
-
     readconf = ReadConf()
+
+    loglevels = {'debug': logging.DEBUG, 'info': logging.INFO, 'warning': logging.WARNING, 'error': logging.ERROR, 'critical': logging.CRITICAL}
+    loglevel = readconf.retrieve('get', 'loglevel', 'LEVEL')
+    lev = loglevels.get(loglevel.lower(), logging.NOTSET)
+
+    logging.basicConfig(level=lev, format='%(asctime)s %(name)-14s: %(levelname)-8s %(message)s', stream=sys.stdout)
+    logger = logging.getLogger('main')
+    logger.info('------------------++++++++BEGIN+++++++++++----------------------')
+
 
     path_output_url = datadir + readconf.retrieve('get', 'path', 'out_url')
     path_output_prefetched = datadir + readconf.retrieve('get', 'path', 'out_prefetched')
