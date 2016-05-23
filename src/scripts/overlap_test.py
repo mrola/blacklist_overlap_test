@@ -303,7 +303,7 @@ class WrapItUp(Common):
             savepath = os.path.join(self.path, desc + '_' + udate + ext)
             if not os.path.exists(self.path):
                 self.logger.warning('Failed to find path: %s' % self.path)
-                self.logger.warning('Setting path to '/tmp/'')
+                self.logger.warning('Setting path to \'/tmp/\'')
                 savepath = os.path.join('/tmp/', desc + '_' + udate + ext)
             self.logger.debug('Attempting to save data...')
             try:
