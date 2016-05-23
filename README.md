@@ -49,7 +49,7 @@ Setting ANNOTATE to *True* or *False* determines whether the actual value are sh
 
 
 #### Output
-- Two plots: barchart and heatmap. Rendered inline if running Jupyiter notebook version or optionally saved to disk if running .py version.
+- Two plots: barchart and heatmap. Rendered inline if running Jupyter notebook version or optionally saved to disk if running .py version.
 - In the standalone .py version a .csv file that basically contains a concatenation of the input data may be saved in a format accepted by tiq-test.
 
 
@@ -63,6 +63,8 @@ $ cd notebooks/
 $ jupyter notebook overlap_test.ipynb
 ```
 All configuration are done within the notebook.
+
+A static version of the notebook rendered by GitHub is found here: [overlap_test.ipynb](https://github.com/mrola/blacklist_overlap_test/blob/master/notebooks/overlap_test.ipynb)
 
 ### <a name="standalone"></a>Standalone .py version
 ```bash
