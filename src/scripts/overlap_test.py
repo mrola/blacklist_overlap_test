@@ -277,12 +277,14 @@ class PlotData(Common):
 
 
 class WrapItUp(Common):
-    def __init__(self, df, path_output):
+    def __init__(self, df, action, path_output):
         self.logger = logging.getLogger('WrapItUp')
         self.df = df
+        self.action = action
         self.path = path_output
         self.readconf = ReadConf()
-        self.doit()
+        if self.action:
+            self.doit()
 
     def show_info(self):
         """ Print some info to verify result """
@@ -352,10 +354,10 @@ def main():
     do_prefetched = readconf.retrieve('getboolean', 'bools', 'READ_PREFETCHED')
 
     gd = GetData(do_url = do_url)
-    WrapItUp(gd.df, path_output_url)
+    WrapItUp(gd.df, gd.do_url, path_output_url)
 
     gd = GetData(do_prefetched = do_prefetched)
-    WrapItUp(gd.df, path_output_prefetched)
+    WrapItUp(gd.df, gd.do_prefetched, path_output_prefetched)
 
     logger.info('Done!\n\n')
 
