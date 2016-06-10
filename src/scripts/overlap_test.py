@@ -261,10 +261,11 @@ class PlotData(Common):
     def plot_counts(self):
         """ Barchart showing size of each blacklist feed """
 
+        gby = self.df.groupby(["source"])
+        s = gby.size().sort_values(ascending=False)
+        sns.set(style='whitegrid', font_scale=1.0, rc={'figure.figsize': (14, 4)})
         fig, ax = plt.subplots()
-        sns.set(style='whitegrid', font_scale=1.1, rc={'figure.figsize': (14, 4)})
-        ax = sns.countplot(y='source', data=self.df.sort_index(axis=1,
-                            ascending=False), palette='bone')
+        ax = sns.barplot(orient='h', x=s, y=s.index, palette="bone")
         ax.set(title='Barplot showing the count of entries per source - %s\n' %
                 (self.set_date()))
         return fig
@@ -275,6 +276,7 @@ class PlotData(Common):
 
         annotate = self.readconf.retrieve('getboolean', 'bools', 'ANNOTATE')
         df_heat = self.do_heatframes()
+        sns.set(style='whitegrid', font_scale=1.0, rc={'figure.figsize': (14, 4)})
         fig, ax = plt.subplots()
         ax = sns.heatmap(df_heat, linewidths=.5, annot=annotate, cmap='bone')
         ax.set(title='Overlap test - heatmap showing overlap between blacklists - %s\n' %
