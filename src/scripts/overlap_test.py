@@ -135,15 +135,23 @@ class GetData(Common):
 
         ips = []
         for line in source:
-            m = re.search(self.ipv4, line.decode('utf-8'))
-            if m:
-                address = m.group(0)
-                if self.valid_ip(address):
-                    ips.append(address)
+            try:
+                m = re.search(self.ipv4, line.decode('utf-8'))
+                if m:
+                    address = m.group(0)
+                    if self.valid_ip(address):
+                        ips.append(address)
+            except UnicodeDecodeError as e:
+                self.logger.warning("utf-8 decode failure. Skipping line...")
+                pass
+            except Exception as e:
+                self.logger.error("Unexpected exception. Skipping line. %s" % e)
+                pass
         if ips:
             return ips
         else:
             return False
+
 
 
     def get_url(self, urls):
