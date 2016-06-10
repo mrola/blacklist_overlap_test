@@ -163,7 +163,7 @@ class GetData(Common):
         for desc, url in iter(urls.items()):
             self.logger.info('Fetching: %s' % url)
             try:
-                r = req.get(url, timeout=timeout)
+                r = req.get(url, timeout=timeout, headers={'User-Agent': 'Mozilla/5.0'})
                 if r.status_code == 200:
                     self.logger.debug('Got status 200 back...')
                     ips = self.parse_content(r.content.splitlines())
