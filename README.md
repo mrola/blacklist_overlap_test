@@ -5,7 +5,7 @@ The blacklist overlap test provides a measure on the degree to which one feed is
 
 This project is inspired by the combine and tiq-test project (written in R) by [@alexcpsec](https://twitter.com/alexcpsec), [@kylemaxwell](https://twitter.com/kylemaxwell) and others. While the tiq-test project provides additional quality metrics and also supports enrichment, this project is pure Python and at this point only provides the overlap test. That said, if overlap test is the goal just running the Jupyter notebook or `overlap_test.py` will do the fetch data, extract IP addresses, calculate overlap between each pair, and build heatmap steps. It is designed to be standalone. 
 
-If you prefer ggplot heatmaps, there's an option to save a .csv file with a format that is expected by tiq.test. See [Importing into tiq-test](#tiq-test) for an example. However, if [Seaborn](http://stanford.edu/~mwaskom/software/seaborn/) is your prefered choise of visualisation library and you're interested in overlap test then please continue reading.
+If you prefer ggplot heatmaps, there's an option to save a .csv file with a format that is expected by tiq.test. See [Importing into tiq-test](#tiq-test) for an example. However, if [Seaborn](http://stanford.edu/~mwaskom/software/seaborn/) is your prefered choise of visualisation library and you'd like to gain insight into degree of overlap between different feeds with minimal effort then please continue reading.
 
 
 ## Purpose
@@ -24,7 +24,7 @@ Example output is shown below.
 ### Blacklist feed sizes
 This barchart shows the blacklist feed sizes, with entry count on x-axis and the feeds (sources) on the y-axis.
 
-![Barchart with sizes of blacklist feeds](http://i.imgur.com/sVf38Xs.png)
+![Barchart with sizes of blacklist feeds](http://i.imgur.com/ZV5oCRk.png)
 
 ### Heatmaps displaying overlap between feeds 
 The heatmap is used to show the overlap between pairs of feeds. The color of a cell reveals the degree to which a blacklist feed on the y-axis contains some feed on the x-axis.
@@ -35,11 +35,11 @@ Setting ANNOTATE to *True* or *False* determines whether the actual value are sh
 
 **Regular**
 
-![Heatmap showing overlap](http://i.imgur.com/709Ov5s.png)
+![Heatmap showing overlap](http://i.imgur.com/52OfM8Q.png)
 
 **Annotated**
 
-![Heatmap showing overlap - annoteated](http://i.imgur.com/1dVE22w.png)
+![Heatmap showing overlap - annoteated](http://i.imgur.com/JLFqlVH.png)
 
 
 ## I/O
