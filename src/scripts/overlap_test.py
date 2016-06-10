@@ -135,15 +135,23 @@ class GetData(Common):
 
         ips = []
         for line in source:
-            m = re.search(self.ipv4, line.decode('utf-8'))
-            if m:
-                address = m.group(0)
-                if self.valid_ip(address):
-                    ips.append(address)
+            try:
+                m = re.search(self.ipv4, line.decode('utf-8'))
+                if m:
+                    address = m.group(0)
+                    if self.valid_ip(address):
+                        ips.append(address)
+            except UnicodeDecodeError as e:
+                self.logger.warning("utf-8 decode failure. Skipping line...")
+                pass
+            except Exception as e:
+                self.logger.error("Unexpected exception. Skipping line. %s" % e)
+                pass
         if ips:
             return ips
         else:
             return False
+
 
 
     def get_url(self, urls):
@@ -155,7 +163,7 @@ class GetData(Common):
         for desc, url in iter(urls.items()):
             self.logger.info('Fetching: %s' % url)
             try:
-                r = req.get(url, timeout=timeout)
+                r = req.get(url, timeout=timeout, headers={'User-Agent': 'Mozilla/5.0'})
                 if r.status_code == 200:
                     self.logger.debug('Got status 200 back...')
                     ips = self.parse_content(r.content.splitlines())
@@ -253,10 +261,11 @@ class PlotData(Common):
     def plot_counts(self):
         """ Barchart showing size of each blacklist feed """
 
+        gby = self.df.groupby(["source"])
+        s = gby.size().sort_values(ascending=False)
+        sns.set(style='whitegrid', font_scale=1.0, rc={'figure.figsize': (14, 4)})
         fig, ax = plt.subplots()
-        sns.set(style='whitegrid', font_scale=1.1, rc={'figure.figsize': (14, 4)})
-        ax = sns.countplot(y='source', data=self.df.sort_index(axis=1,
-                            ascending=False), palette='bone')
+        ax = sns.barplot(orient='h', x=s, y=s.index, palette="bone")
         ax.set(title='Barplot showing the count of entries per source - %s\n' %
                 (self.set_date()))
         return fig
@@ -267,6 +276,7 @@ class PlotData(Common):
 
         annotate = self.readconf.retrieve('getboolean', 'bools', 'ANNOTATE')
         df_heat = self.do_heatframes()
+        sns.set(style='whitegrid', font_scale=1.0, rc={'figure.figsize': (14, 4)})
         fig, ax = plt.subplots()
         ax = sns.heatmap(df_heat, linewidths=.5, annot=annotate, cmap='bone')
         ax.set(title='Overlap test - heatmap showing overlap between blacklists - %s\n' %
