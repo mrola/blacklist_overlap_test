@@ -326,7 +326,8 @@ class WrapItUp(Common):
             self.logger.debug('Attempting to save data...')
             try:
                 if dtype == 'frame':
-                    self.df.to_csv(savepath, index=False)
+                    savepath = savepath + '.gz'
+                    self.df.to_csv(savepath, index=False, encoding='utf-8', compression='gzip')
                 if dtype == 'fig':
                     data.savefig(savepath, bbox_inches='tight', pad_inches=1)
                 self.logger.info('Successfully saved data to: %s' % os.path.relpath(savepath))
