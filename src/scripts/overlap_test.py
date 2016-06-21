@@ -278,7 +278,10 @@ class PlotData(Common):
         df_heat = self.do_heatframes()
         sns.set(style='whitegrid', font_scale=1.0, rc={'figure.figsize': (14, 4)})
         fig, ax = plt.subplots()
-        ax = sns.heatmap(df_heat, linewidths=.5, annot=annotate, cmap='bone')
+        asize = None
+        if df_heat.shape[0] > 10:
+            asize = {'size': 7}
+        ax = sns.heatmap(df_heat, linewidths=.5, annot=annotate, fmt=".2g", annot_kws=asize, cmap='bone')
         ax.set(title='Overlap test - heatmap showing overlap between blacklists - %s\n' %
                (self.set_date()))
         plt.xticks(rotation=40, horizontalalignment='right')
@@ -293,6 +296,8 @@ class WrapItUp(Common):
         self.action = action
         self.path = path_output
         self.readconf = ReadConf()
+        self.TEST = self.readconf.retrieve('getboolean', 'bools', 'TEST')
+        self.save = self.readconf.retrieve('getboolean', 'bools', 'SAVE')
         if self.action:
             self.doit()
 
@@ -308,12 +313,13 @@ class WrapItUp(Common):
     def save_data(self, data, dtype, ext, desc):
         """ Write to disk """
 
-        self.save = self.readconf.retrieve('getboolean', 'bools', 'SAVE')
         if self.save:
             date = self.set_date()
             udate = date.replace('-', '')
             savepath = os.path.join(self.path, desc + '_' + udate + ext)
-            if not os.path.exists(self.path):
+            if self.TEST is True:
+                savepath = os.path.join('/tmp/', desc + '_' + udate + ext)
+            elif not os.path.exists(self.path):
                 self.logger.warning('Failed to find path: %s' % self.path)
                 self.logger.warning('Setting path to \'/tmp/\'')
                 savepath = os.path.join('/tmp/', desc + '_' + udate + ext)
@@ -332,6 +338,8 @@ class WrapItUp(Common):
 
         if self.df.values.size > 0:
             self.show_info()
+            if self.TEST is True:
+                self.logger.info('TEST is True so setting path to \'/tmp/\'')
             self.save_data(self.df, 'frame', '.csv', 'raw')
             plotdata = PlotData(self.df)
             barplot = plotdata.plot_counts()
