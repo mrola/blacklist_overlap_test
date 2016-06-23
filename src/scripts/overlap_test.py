@@ -4,6 +4,7 @@ import os
 import re
 import sys 
 import time
+import gzip
 import socket
 import logging
 import itertools
@@ -81,8 +82,10 @@ class GetData(Common):
 
         self.readconf = ReadConf()
         self.TEST = self.readconf.retrieve('getboolean', 'bools', 'TEST')
+        self.DUMP = self.readconf.retrieve('getboolean', 'bools', 'DUMP')
         self.do_url = kwargs.get('do_url') 
         self.do_prefetched = kwargs.get('do_prefetched')
+        self.path_tmp = self.readconf.retrieve('get', 'path', 'tmpdir')
         self.getdata()
 
     def getdata(self):
@@ -103,9 +106,10 @@ class GetData(Common):
 
     def do_pandas(self, ips, name):
         """ Takes a list of IPv4 addresses as input and stores those in a Pandas DataFrame.
-         DataFrame columns: 'entity','type','direction','source','notes','date'
+         DataFrame columns: 
+         'entity','type','direction','source','notes','date'
+        '1.234.27.146','IPv4','inbound','http://malc0de.com/bl/IP_Blacklist.txt','','2016-01-27
 
-         '1.234.27.146','IPv4','inbound','http://malc0de.com/bl/IP_Blacklist.txt','','2016-01-27
          DATE is set to today, override this in config if needed.
         """
 
@@ -158,6 +162,8 @@ class GetData(Common):
         """ Fetch blacklist feeds from urls (as defined in inbound_urls) """
 
         self.logger.info('>>>> Fetching public inbound blacklisted IPv4 addresses from URLs <<<<')
+        if self.DUMP:
+            self.logger.info('DUMP is True so will dump raw contents to %s' % self.path_tmp)
         fail_count = 0
         timeout = int(self.readconf.retrieve('get', 'misc', 'TIMEOUT'))
         for desc, url in iter(urls.items()):
@@ -166,6 +172,14 @@ class GetData(Common):
                 r = req.get(url, timeout=timeout, headers={'User-Agent': 'Mozilla/5.0'})
                 if r.status_code == 200:
                     self.logger.debug('Got status 200 back...')
+                    if self.DUMP:
+                        dumppath = os.path.join(self.path_tmp, desc + '.gz')
+                        try:
+                            with gzip.open(dumppath, "wt") as f:
+                                f.write(r.text)
+                                self.logger.debug("Successfully saved raw content to %s" % dumppath)
+                        except Exception as e:
+                            self.logger.error("Failed to dump url contents to %s: %s" % (dumppath, e))
                     ips = self.parse_content(r.content.splitlines())
                     if ips:
                         self.df = self.do_pandas(ips, desc)
@@ -295,9 +309,11 @@ class WrapItUp(Common):
         self.df = df
         self.action = action
         self.path = path_output
+
         self.readconf = ReadConf()
         self.TEST = self.readconf.retrieve('getboolean', 'bools', 'TEST')
         self.save = self.readconf.retrieve('getboolean', 'bools', 'SAVE')
+        self.path_tmp = self.readconf.retrieve('get', 'path', 'tmpdir')
         if self.action:
             self.doit()
 
@@ -318,15 +334,16 @@ class WrapItUp(Common):
             udate = date.replace('-', '')
             savepath = os.path.join(self.path, desc + '_' + udate + ext)
             if self.TEST is True:
-                savepath = os.path.join('/tmp/', desc + '_' + udate + ext)
+                savepath = os.path.join(self.path_tmp, desc + '_' + udate + ext)
             elif not os.path.exists(self.path):
                 self.logger.warning('Failed to find path: %s' % self.path)
-                self.logger.warning('Setting path to \'/tmp/\'')
-                savepath = os.path.join('/tmp/', desc + '_' + udate + ext)
+                self.logger.warning('Setting base dir to %s' % self.path_tmp)
+                savepath = os.path.join(self.path_tmp, desc + '_' + udate + ext)
             self.logger.debug('Attempting to save data...')
             try:
                 if dtype == 'frame':
-                    self.df.to_csv(savepath, index=False)
+                    savepath = savepath + '.gz'
+                    self.df.to_csv(savepath, index=False, encoding='utf-8', compression='gzip')
                 if dtype == 'fig':
                     data.savefig(savepath, bbox_inches='tight', pad_inches=1)
                 self.logger.info('Successfully saved data to: %s' % os.path.relpath(savepath))
@@ -339,7 +356,7 @@ class WrapItUp(Common):
         if self.df.values.size > 0:
             self.show_info()
             if self.TEST is True:
-                self.logger.info('TEST is True so setting path to \'/tmp/\'')
+                self.logger.info('TEST is True so setting base dir to \'/tmp/\'')
             self.save_data(self.df, 'frame', '.csv', 'raw')
             plotdata = PlotData(self.df)
             barplot = plotdata.plot_counts()

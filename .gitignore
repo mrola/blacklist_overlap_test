@@ -9,6 +9,10 @@
 
 # misc
 notes.txt
+test*.py
+/test
 
 # notebook data
-#data/
+data/**
+!data/*/output/*.out
+!data/*/input/*.out
