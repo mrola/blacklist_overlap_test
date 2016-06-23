@@ -85,6 +85,7 @@ class GetData(Common):
         self.DUMP = self.readconf.retrieve('getboolean', 'bools', 'DUMP')
         self.do_url = kwargs.get('do_url') 
         self.do_prefetched = kwargs.get('do_prefetched')
+        self.path_tmp = self.readconf.retrieve('get', 'path', 'tmpdir')
         self.getdata()
 
     def getdata(self):
@@ -162,7 +163,7 @@ class GetData(Common):
 
         self.logger.info('>>>> Fetching public inbound blacklisted IPv4 addresses from URLs <<<<')
         if self.DUMP:
-            self.logger.info('DUMP is True so will dump raw contents to \'/tmp/\'')
+            self.logger.info('DUMP is True so will dump raw contents to %s' % self.path_tmp)
         fail_count = 0
         timeout = int(self.readconf.retrieve('get', 'misc', 'TIMEOUT'))
         for desc, url in iter(urls.items()):
@@ -172,7 +173,7 @@ class GetData(Common):
                 if r.status_code == 200:
                     self.logger.debug('Got status 200 back...')
                     if self.DUMP:
-                        dumppath = os.path.join('/tmp/', desc + '.gz')
+                        dumppath = os.path.join(self.path_tmp, desc + '.gz')
                         try:
                             with gzip.open(dumppath, "wt") as f:
                                 f.write(r.text)
@@ -308,9 +309,11 @@ class WrapItUp(Common):
         self.df = df
         self.action = action
         self.path = path_output
+
         self.readconf = ReadConf()
         self.TEST = self.readconf.retrieve('getboolean', 'bools', 'TEST')
         self.save = self.readconf.retrieve('getboolean', 'bools', 'SAVE')
+        self.path_tmp = self.readconf.retrieve('get', 'path', 'tmpdir')
         if self.action:
             self.doit()
 
@@ -331,11 +334,11 @@ class WrapItUp(Common):
             udate = date.replace('-', '')
             savepath = os.path.join(self.path, desc + '_' + udate + ext)
             if self.TEST is True:
-                savepath = os.path.join('/tmp/', desc + '_' + udate + ext)
+                savepath = os.path.join(self.path_tmp, desc + '_' + udate + ext)
             elif not os.path.exists(self.path):
                 self.logger.warning('Failed to find path: %s' % self.path)
-                self.logger.warning('Setting base dir to \'/tmp/\'')
-                savepath = os.path.join('/tmp/', desc + '_' + udate + ext)
+                self.logger.warning('Setting base dir to %s' % self.path_tmp)
+                savepath = os.path.join(self.path_tmp, desc + '_' + udate + ext)
             self.logger.debug('Attempting to save data...')
             try:
                 if dtype == 'frame':
