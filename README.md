@@ -11,11 +11,11 @@ If you prefer ggplot heatmaps, there's an option to save a .csv file with a form
 ## Purpose
 The purpose of this project is to provide a means to measure the degree to which blacklists overlap in terms of IPv4 entries. 
 
-Addresses are fetched from public and private (optional) blacklists and two plots are given as output, a barchart showing sizes per blacklist and a heatmap showing the degree of overlap between the blacklists. There is also support for importing blacklists from the local filesystem.
+IP addresses are fetched from public and private (optional) blacklists and two plots are given as output, a barchart showing sizes per blacklist and a heatmap showing the degree of overlap between the blacklists. There is also support for importing blacklists from the local filesystem.
 
 The Jupyter notebook found in notebooks directory gives transparancy into the code and plots as you run it, the [Standalone .py version](#standalone) saves the plots on disk and has a separate config file. But in terms of functionality the .py and notebook versions don't differ apart from the option to save the data in a .csv file if running the .py version.
 
-URLs to feeds or paths to local files to be imported are all set within the notebook or in overlap.conf (if running the .py version). There are no assumptions on the formats of these feeds or local files, a regexp is used to search for IPv4 addresses line by line.
+URLs to feeds or paths to local files to be imported are all set within the notebook or in overlap.conf if running the .py version. There are no assumptions on the formats of these feeds or local files, a regexp is used to search for IPv4 addresses line by line.
 
 
 ## Plots
@@ -88,12 +88,6 @@ A partial output from the execution of the standalone version is shown below. Th
 2016-05-23 08:26:58,973 GetData       : INFO     Fetching: https://feodotracker.abuse.ch/blocklist/?download=badips
 2016-05-23 08:27:00,842 GetData       : WARNING  Found no valid ipv4 addresses.
 2016-05-23 08:27:00,844 GetData       : INFO     Fetching: https://palevotracker.abuse.ch/blocklists.php?download=ipblocklist
-2016-05-23 08:27:02,125 GetData       : INFO     Fetching: http://rules.emergingthreats.net/fwrules/emerging-Block-IPs.txt
-2016-05-23 08:27:02,174 GetData       : INFO     Fetching: http://www.malwaredomainlist.com/hostslist/ip.txt
-2016-05-23 08:27:02,234 GetData       : INFO     Fetching: http://lists.blocklist.de/lists/all.txt
-2016-05-23 08:27:02,584 GetData       : INFO     Fetching: http://www.openbl.org/lists/base.txt
-2016-05-23 08:27:03,065 GetData       : INFO     Fetching: https://zeustracker.abuse.ch/blocklist.php?download=badips
-2016-05-23 08:27:03,883 GetData       : INFO     Fetching: http://malc0de.com/bl/IP_Blacklist.txt
 2016-05-23 08:27:03,952 WrapItUp      : INFO     Verify we got all sources:
 0     feodotracker__ipblocklist     
 1     alienvault_reputation.generic 
@@ -123,48 +117,19 @@ dtype: object
 2016-05-23 08:27:05,312 PlotData      : INFO     Doing heatmap calculations...
 2016-05-23 08:27:07,527 WrapItUp      : INFO     Successfully saved data to: ../../data/public_inbound/output/heatmap_20160523.png
 
-2016-05-23 08:27:07,537 GetData       : INFO     >>>> Fetching private inbound blacklisted IPv4 addresses from disk <<<<
-2016-05-23 08:27:07,537 GetData       : INFO     Reading data...
-2016-05-23 08:27:07,537 GetData       : INFO     ../../data/private_inbound/input/compromised-ips.ioc
-2016-05-23 08:27:07,560 GetData       : INFO     ../../data/private_inbound/input/zeus_ipblocklist.ioc
-2016-05-23 08:27:07,585 GetData       : INFO     ../../data/private_inbound/input/all.ioc
-2016-05-23 08:27:08,601 GetData       : INFO     ../../data/private_inbound/input/all1.ioc
-2016-05-23 08:27:09,256 GetData       : INFO     ../../data/private_inbound/input/all2.ioc
-2016-05-23 08:27:10,914 GetData       : INFO     ../../data/private_inbound/input/blocklist_sample.ioc.in
-2016-05-23 08:27:10,988 GetData       : INFO     ../../data/private_inbound/input/ips.ioc
-2016-05-23 08:27:11,143 WrapItUp      : INFO     Verify we got all sources:
-0    compromised-ips 
-1    zeus_ipblocklist
-2    all             
-3    all1            
-4    all2            
-5    blocklist_sample
-6    ips             
-dtype: object
-
-2016-05-23 08:27:11,154 WrapItUp      : INFO     First few frame rows:
-        entity  type direction           source notes        date
-0  1.85.21.181  IPv4  inbound   compromised-ips        2016-05-23
-1  1.85.62.51   IPv4  inbound   compromised-ips        2016-05-23
-2  1.9.79.191   IPv4  inbound   compromised-ips        2016-05-23
-3  1.9.79.193   IPv4  inbound   compromised-ips        2016-05-23
-4  1.93.51.221  IPv4  inbound   compromised-ips        2016-05-23
-
-2016-05-23 08:27:11,154 WrapItUp      : INFO     Frame contains 508953 entries.
-2016-05-23 08:27:12,949 WrapItUp      : INFO     Successfully saved data to: ../../data/private_inbound/output/raw_20160523.csv
-2016-05-23 08:27:23,343 WrapItUp      : INFO     Successfully saved data to: ../../data/private_inbound/output/barchart_20160523.png
-2016-05-23 08:27:23,388 PlotData      : INFO     Doing heatmap calculations...
-2016-05-23 08:27:24,590 WrapItUp      : INFO     Successfully saved data to: ../../data/private_inbound/output/heatmap_20160523.png
 2016-05-23 08:27:24,590 main          : INFO     Done!
 ```
 
 #### Configuration
-Configuration options are found in src/config/overlap_test.conf.
+Configuration options are found in `src/config/overlap_test.conf`
 
-- `save` If True, save data to dirs defined in [path] section.
-- `get_urls` If True, fetch data from public sources defined in [inbound_urls] section.
-- `read_prefetched` If True, fetch data from local filesystem as defined in [path] and [inbound_prefetched] sections.
+- `save` If True, save data to dirs defined in `[path]` section.
+- `get_urls` If True, fetch data from public sources defined in `[inbound_urls]` section.
+- `read_prefetched` If True, fetch data from local filesystem as defined in `[path]` and `[inbound_prefetched]` sections.
+- `test` If True, save data to path_tmp defined in `[path]` section and get url and prefetched from `[*_test]` conf sections.
+- `dump` If True, save raw contents for each url in `path_tmp` defined in [path] section.
 - `annotate` If True, show actual value in each cell of heatmap.
+
 
 - `loglevel` By default INFO is set (and output to stdout).
 
@@ -175,6 +140,7 @@ Configuration options are found in src/config/overlap_test.conf.
     - `out_url` path to save .csv and .png when processing public sources.
     - `out_prefetched` path to save .csv and .png when processing local filesystem sources.
     - `in_prefetched` path to input files when processing local filesystem sources.
+    - `path_tmp` path to tmp dir. Used if `dump` is True or failure to find output paths. 
 
 - `inbound_urls` <br>Key: Description of source. <br>Value: URL to be fetched.
 

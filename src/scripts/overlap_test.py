@@ -38,6 +38,9 @@ class Common:
     """ Checking if date is set is done from multiple places so
     putting the check in a separare class that may be inhereted by others. 
     """
+    def __init__(self):
+        self.logger = logging.getLogger('Common')
+    
 
     def set_date(self):
         DATE = ReadConf().retrieve('get', 'misc', 'DATE')
@@ -45,6 +48,18 @@ class Common:
             return DATE
         else:
             return(time.strftime('%Y-%m-%d'))
+
+    def dumper(self, dumppath, content, msg, mode):
+        """ Saves utf-8 decode failure to tmpdir (set in conf). 
+        Saves raw content of url:s to tmpdir if DUMP is True. 
+        """
+        try:
+            with gzip.open(dumppath, mode) as f:
+                f.write(content)
+                self.logger.debug("Successfully saved %s to %s" % (msg, dumppath))
+        except Exception as e:
+            self.logger.error("Failed to dump %s to %s: %s" % (msg, dumppath, e))
+            pass
 
 
 class ReadConf:
@@ -86,6 +101,7 @@ class GetData(Common):
         self.do_url = kwargs.get('do_url') 
         self.do_prefetched = kwargs.get('do_prefetched')
         self.path_tmp = self.readconf.retrieve('get', 'path', 'tmpdir')
+        self.debug = self.readconf.retrieve('get', 'loglevel', 'LEVEL')
         self.getdata()
 
     def getdata(self):
@@ -138,6 +154,7 @@ class GetData(Common):
         """ Extract IPv4 address from a list of rows """
 
         ips = []
+        failcount = 0
         for line in source:
             try:
                 m = re.search(self.ipv4, line.decode('utf-8'))
@@ -146,11 +163,19 @@ class GetData(Common):
                     if self.valid_ip(address):
                         ips.append(address)
             except UnicodeDecodeError as e:
-                self.logger.warning("utf-8 decode failure. Skipping line...")
+                failcount += 1
+                if self.debug == 'DEBUG':
+                    t = time.asctime()
+                    msg = t + '; ' + str(e) + '; ' + str(line) + '\n'
+                    mode = 'at'
+                    dumppath = os.path.join(self.path_tmp, 'overlap_test_utf8_parse_failures.txt.gz')
+                    self.dumper(dumppath, msg, "line", mode)
                 pass
             except Exception as e:
                 self.logger.error("Unexpected exception. Skipping line. %s" % e)
                 pass
+        if failcount > 0:
+            self.logger.warning("Skipped %d lines due to utf-8 decode failures. Set logging mode to DEBUG to write decode failure lines to %s" % (failcount, self.path_tmp))
         if ips:
             return ips
         else:
@@ -172,17 +197,12 @@ class GetData(Common):
                 r = req.get(url, timeout=timeout, headers={'User-Agent': 'Mozilla/5.0'})
                 if r.status_code == 200:
                     self.logger.debug('Got status 200 back...')
-                    if self.DUMP:
-                        dumppath = os.path.join(self.path_tmp, desc + '.gz')
-                        try:
-                            with gzip.open(dumppath, "wt") as f:
-                                f.write(r.text)
-                                self.logger.debug("Successfully saved raw content to %s" % dumppath)
-                        except Exception as e:
-                            self.logger.error("Failed to dump url contents to %s: %s" % (dumppath, e))
                     ips = self.parse_content(r.content.splitlines())
                     if ips:
                         self.df = self.do_pandas(ips, desc)
+                        if self.DUMP:
+                            dumppath = os.path.join(self.path_tmp, desc + '.gz')
+                            self.dumper(dumppath, r.text, "url content", "wt")
                     else:
                         self.logger.warning('Found no valid ipv4 addresses.')
                 else:
