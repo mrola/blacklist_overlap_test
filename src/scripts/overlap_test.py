@@ -136,7 +136,7 @@ class GetData(Common):
         (df_ips['entity'], df_ips['type'], df_ips['direction'],
          df_ips['source'], df_ips['notes'], df_ips['date']) = tup
         self.df = self.df.append(df_ips, ignore_index=True)
-        return self.df
+        return self.df.drop_duplicates()
 
 
     def valid_ip(self, address):
