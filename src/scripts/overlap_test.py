@@ -232,15 +232,23 @@ class GetData(Common):
             else:
                 try:
                     self.logger.info('%s' % (os.path.relpath(filen)))
-                    with open(filen, 'rb') as f:
-                        ips = self.parse_content(f.readlines())
-                        if ips:
-                            self.df = self.do_pandas(ips, desc)
-                        else:
-                            self.logger.warning('Failed to find valid entries.')
+                    f = None
+                    if filen.endswith('.gz'):
+                        f = gzip.open(filen, 'rb')
+                    else:
+                        f = open(filen, 'rb') 
+
+                    ips = self.parse_content(f.readlines())
+                    if ips:
+                        self.df = self.do_pandas(ips, desc)
+                    else:
+                        self.logger.warning('Failed to find valid entries.')
                 except Exception as e:
-                    self.logger.error('Caught exception: %s Abort...' % e)
+                    self.logger.error('Caught exception: %s' % e)
                     break
+                finally:
+                    if f is not None:
+                        f.close()
         return self.df
 
 
