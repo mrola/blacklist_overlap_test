@@ -22,7 +22,7 @@ path_config = path_script + '/../config/overlap_test.conf'
 datadir = path_script + '/../../data/'
 
 # Pandas - global display options
-pd.set_option('display.width', 120)
+pd.set_option('display.width', None) 
 pd.set_option('max_colwidth', 0)
 
 # Seaborn - plot options
@@ -258,6 +258,7 @@ class PlotData(Common):
         self.logger = logging.getLogger('PlotData')
         self.df = df
         self.readconf = ReadConf()
+        self.BARPLOT_SORT = self.readconf.retrieve('getboolean', 'bools', 'BARPLOT_SORT')
 
     def fill_heatmap(self, cols, dfp, df_heat):
         """ Calculate proportion of items in intersection between two blacklists to each blacklist.
@@ -304,7 +305,10 @@ class PlotData(Common):
         """ Barchart showing size of each blacklist feed """
 
         gby = self.df.groupby(["source"])
-        s = gby.size().sort_values(ascending=False)
+        if self.BARPLOT_SORT:
+            s = gby.size().sort_values(ascending=False)
+        else:
+            s = gby.size()
         sns.set(style='whitegrid', font_scale=1.0, rc={'figure.figsize': (14, 4)})
         fig, ax = plt.subplots()
         ax = sns.barplot(orient='h', x=s, y=s.index, palette="bone")

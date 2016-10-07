@@ -3,10 +3,10 @@
 
 The blacklist overlap test provides a measure on the degree to which one feed is contained within some other feed. It is a metric that may be used to exclude blacklist feeds that is already contained in other feeds.
 
-This project is inspired by the combine and tiq-test project (written in R) by [@alexcpsec](https://twitter.com/alexcpsec), [@kylemaxwell](https://twitter.com/kylemaxwell) and others. While the tiq-test project provides additional quality metrics and also supports enrichment, this project is pure Python and at this point only provides the overlap test. That said, if overlap test is the goal just running the Jupyter notebook or `overlap_test.py` will do the fetch data, extract IP addresses, calculate overlap between each pair, and build heatmap steps. It is designed to be standalone. 
+This project is inspired by the combine and tiq-test project (written in R) by [@alexcpsec](https://twitter.com/alexcpsec), [@kylemaxwell](https://twitter.com/kylemaxwell) and others. While the tiq-test project provides additional quality metrics and also supports enrichment, this project is pure Python and provides the overlap test. That said, if overlap test is the goal just running the Jupyter notebook or `overlap_test.py` will do the fetch data, extract IP addresses, calculate overlap between each pair, and build heatmap steps. It is designed to be standalone. If [Seaborn](http://stanford.edu/~mwaskom/software/seaborn/) is your prefered choise of visualisation library and you'd like to gain insight into degree of overlap between different feeds with minimal effort then please continue reading.
 
-If you prefer R and ggplot heatmaps you've probably stopped reading by now, if not there's an option to save a .csv file with a format that is expected by tiq.test. See [Importing into tiq-test](#tiq-test) for an example. However, if [Seaborn](http://stanford.edu/~mwaskom/software/seaborn/) is your prefered choise of visualisation library and you'd like to gain insight into degree of overlap between different feeds with minimal effort then please continue reading.
 
+If you prefer R there's an option to save a .csv file with a format that is expected by tiq.test. See [Importing into tiq-test](#tiq-test) for an example. 
 
 ## Purpose
 The purpose of this project is to provide a means to measure the degree to which blacklists overlap in terms of IPv4 entries. 
@@ -70,7 +70,11 @@ All configuration are done within the notebook.
 A static version of the notebook rendered by GitHub is found here: [overlap_test.ipynb](https://github.com/mrola/blacklist_overlap_test/blob/master/notebooks/overlap_test.ipynb)
 
 ### <a name="standalone"></a>Standalone .py version
+
+First add/remove URLs of blacklist feeds to be parsed and script parameters in `overlap_test.conf` under `src/config/`. Then run the script.
+
 ```bash
+$ vim src/config/overlap_test.conf
 $ cd src/scripts/
 $ python overlap_test.py
 ```
@@ -110,9 +114,7 @@ A partial output from the execution of the standalone version is shown below.
 2016-06-27 21:33:10,660 GetData       : INFO     Fetching: https://www.badips.com/get/list/postfix/3?age=2w
 2016-06-27 21:33:11,940 GetData       : INFO     Fetching: https://reputation.alienvault.com/reputation.generic
 2016-06-27 21:33:14,555 GetData       : INFO     Fetching: http://www.autoshun.org/files/shunlist.csv
-2016-06-27 21:33:21,307 GetData       : WARNING  Got status 404
-2016-06-27 21:33:21,343 WrapItUp      : INFO     Verify we got all sources:
-0     spamhaus.edrop             
+2016-06-27 21:33:21,307 GetData       : WARNING  Got status 404 2016-06-27 21:33:21,343 WrapItUp      : INFO     Verify we got all sources: 0     spamhaus.edrop             
 1     dragonresearch.vnc         
 2     badips.ssh                 
 3     dragonresearch.ssh         
@@ -143,45 +145,40 @@ dtype: object
 #### Configuration
 Configuration options are found in `src/config/overlap_test.conf`
 
-- `save` If True, save data to dirs defined in `[path]` section.
-- `get_urls` If True, fetch data from public sources defined in `[inbound_urls]` section.
-- `read_prefetched` If True, fetch data from local filesystem as defined in `[path]` and `[inbound_prefetched]` sections.
-- `test` If True, save data to path_tmp defined in `[path]` section and get url and prefetched from `[*_test]` conf sections.
-- `dump` If True, save raw contents for each url in `path_tmp` defined in [path] section.
-- `annotate` If True, show actual value in each cell of heatmap.
-
-- `loglevel` By default INFO is set (and output to stdout). DEBUG will have the additional effect of saving utf-8 decode errors to `path_tmp`.
-
-- `date` Set if you don't want today as date, format "YYYY-MM-DD".
-- `timeout` number of seconds Requests will wait for a response from the server (both connect and between reads).
-
-- `path`
-    - `out_url` path to save .csv and .png when processing public sources.
-    - `out_prefetched` path to save .csv and .png when processing local filesystem sources.
-    - `in_prefetched` path to input files when processing local filesystem sources.
-    - `path_tmp` path to tmp dir. Used if `dump` is True or failure to find output paths. 
-
-- `inbound_urls` <br>Key: Description of source. <br>Value: URL to be fetched.
-
-<pre>
-   malwaredomainlist_ip.txt =              http://www.malwaredomainlist.com/hostslist/ip.txt
-   malc0de_IP_Blacklist.txt =              http://malc0de.com/bl/IP_Blacklist.txt 
-   ...
-</pre>
-
-- `inbound_prefetched`<br>Key: Description of source. <br>Value: file to be read.
-
-<pre>
-   compromised-ips =                   compromised-ips.ioc
-   ips  =                              ips.ioc 
-   ...
-</pre>
+Key | Description
+----|---
+*save* | If True, save data to dirs defined in `[path]` section.
+*get_urls* | If True, fetch data from public sources defined in `[inbound_urls]` section.
+*read_prefetched* | If True, fetch data from local filesystem as defined in `[path]` and `[inbound_prefetched]` sections.
+*test* |  If True, save data to path_tmp defined in `[path]` section and get url and prefetched from `[*_test]` conf sections.
+*dump* |  If True, save raw contents for each url in `path_tmp` defined in [path] section.
+*annotate* |  If True, show actual value in each cell of heatmap.
+*barplot_sort* |  If True, sort barplot by size.
+|
+|
+*loglevel* | By default INFO is set (and output to stdout). DEBUG will have the additional effect of saving utf-8 decode errors to `path_tmp`.
+|
+|
+*date* | Set if you don't want today as date, format "YYYY-MM-DD".
+*timeout* | Number of seconds Requests will wait for a response from the server (both connect and between reads).
+|
+|
+*out_url* | path to save .csv and .png when processing public sources.
+*out_prefetched* |  path to save .csv and .png when processing local filesystem sources.
+*in_prefetched* |  path to input files when processing local filesystem sources.
+*path_tmp* | path to tmp dir. Used if `dump` is True or failure to find output paths. 
+|
+|
+*inbound_urls* | Key: Description of source. <br>Value: URL to be fetched. <br>malwaredomainlist_ip.txt = http://www.malwaredomainlist.com/hostslist/ip.txt<br> malc0de_IP_Blacklist.txt = http://malc0de.com/bl/IP_Blacklist.txt<br> ...
+|
+|
+*inbound_prefetched* | Key: Description of source. <br>Value: file to be read. <br> compromised-ips = compromised-ips.ioc <br> ips = ips.ioc ...
 
 
 ## <a name="requirements"></a>Requirements
 
 * Python >= 2.7 <small>(tested with 2.7 and 3.4)</small>
-* Pandas > 0.16 <small>(tested with 0.16 and 0.18)</small>
+* Pandas > 0.17 
     * http://pandas.pydata.org/pandas-docs/stable/index.html
     * https://github.com/pydata/pandas
 * Seaborn >= 0.6.0 <small>(tested with 0.6.0 and 0.7.0)</small>
@@ -191,11 +188,25 @@ Configuration options are found in `src/config/overlap_test.conf`
     * http://docs.python-requests.org/en/latest/
     * https://github.com/kennethreitz/requests
 
-For the standalone version, the configparser package is required as well.
 
 If the above requirements are not met then installing miniconda is probably the simplest and fastest way to get ahead. Conda will allow you to create a local "environment" that contains all the necessary packages with all dependencies met without interfering with any global Python installation
 
 >*Conda is a cross-platform and Python-agnostic package manager and environment manager program that quickly   installs, runs and updates packages and their dependencies and easily creates, saves, loads and switches   between environments on your local computer. Conda is included in all versions of Anaconda, Miniconda and Anaconda Server.*
+
+
+```bash
+$ ## begin
+$ # check version http://conda.pydata.org/miniconda.html
+$ # assuming you're running a 64-bit linux and prefer python 3.5
+$ wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+$ bash Miniconda3-latest-Linux-x86_64.sh
+$ conda create -n py3.5 python=3.5
+$ source activate py3.5
+$ conda install pandas seaborn requests
+$ # run the overlap test
+$ source deactivate
+$ ## end
+```
 
 Reference: http://conda.pydata.org/miniconda.html
 
