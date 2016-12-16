@@ -3,7 +3,7 @@
 
 The blacklist overlap test provides a measure on the degree to which one feed is contained within some other feed. It is a metric that may be used to exclude blacklist feeds that is already contained in other feeds.
 
-This project is inspired by the combine and tiq-test project (written in R) by [@alexcpsec](https://twitter.com/alexcpsec), [@kylemaxwell](https://twitter.com/kylemaxwell) and others. While the tiq-test project provides additional quality metrics and also supports enrichment, this project is pure Python and provides the overlap test. That said, if overlap test is the goal just running the Jupyter notebook or `overlap_test.py` will do the fetch data, extract IP addresses, calculate overlap between each pair, and build heatmap steps. It is designed to be standalone. If [Seaborn](http://stanford.edu/~mwaskom/software/seaborn/) is your prefered choise of visualisation library and you'd like to gain insight into degree of overlap between different feeds with minimal effort then please continue reading.
+This project is inspired by the combine and tiq-test project (written in R) by [@alexcpsec](https://twitter.com/alexcpsec), [@kylemaxwell](https://twitter.com/kylemaxwell) and others. While the tiq-test project provides additional quality metrics and also supports enrichment, this project is pure Python and provides the overlap test. That said, if overlap test is the goal just running the Jupyter notebook or `overlap_test.py` will do the fetch data, extract IP addresses, calculate overlap between each pair, and build heatmap steps. It is designed to be standalone. If you'd like to gain insight into degree of overlap between different feeds with minimal effort then please continue reading.
 
 
 If you prefer R there's an option to save a .csv file with a format that is expected by tiq.test. See [Importing into tiq-test](#tiq-test) for an example. 
@@ -61,6 +61,9 @@ Setting ANNOTATE to *True* or *False* determines whether the actual value are sh
 Make sure the [requirements](#requirements) are fullfilled. 
 
 ### Notebook
+This project started out with a notebook only, but as it grew and became more complex it was more convenient to move it to a standalone python script. While the notebook provides transparancy into execution details it is more of a proof of concept. 
+If you're going to run the overlap test on a day to day basis then the standalone version is probably what you want.
+
 ```bash
 $ cd notebooks/
 $ jupyter notebook overlap_test.ipynb
@@ -154,25 +157,15 @@ Key | Description
 *dump* |  If True, save raw contents for each url in `path_tmp` defined in [path] section.
 *annotate* |  If True, show actual value in each cell of heatmap.
 *barplot_sort* |  If True, sort barplot by size.
-|
-|
 *loglevel* | By default INFO is set (and output to stdout). DEBUG will have the additional effect of saving utf-8 decode errors to `path_tmp`.
-|
-|
-*date* | Set if you don't want today as date, format "YYYY-MM-DD".
+*date* | Set if you don't want today as date, format "YYYY-MM-DD". This only affects the date field in the csv file that contains all the feeds that was fetched.
 *timeout* | Number of seconds Requests will wait for a response from the server (both connect and between reads).
-|
-|
-*out_url* | path to save .csv and .png when processing public sources.
-*out_prefetched* |  path to save .csv and .png when processing local filesystem sources.
-*in_prefetched* |  path to input files when processing local filesystem sources.
-*path_tmp* | path to tmp dir. Used if `dump` is True or failure to find output paths. 
-|
-|
-*inbound_urls* | Key: Description of source. <br>Value: URL to be fetched. <br>malwaredomainlist_ip.txt = http://www.malwaredomainlist.com/hostslist/ip.txt<br> malc0de_IP_Blacklist.txt = http://malc0de.com/bl/IP_Blacklist.txt<br> ...
-|
-|
-*inbound_prefetched* | Key: Description of source. <br>Value: file to be read. <br> compromised-ips = compromised-ips.ioc <br> ips = ips.ioc ...
+*out_url* | Path to save .csv and .png when processing public sources.
+*out_prefetched* |  Path to save .csv and .png when processing local filesystem sources.
+*in_prefetched* |  Path to input files when processing local filesystem sources.
+*tmpdir* | Path to tmp dir. Used if `dump` is True or failure to find output paths. 
+*inbound_urls* | **Key:** Description of source. <br>**Value:** URL to be fetched. 
+*inbound_prefetched* | **Key:** Description of source. <br>**Value:** File to be read.
 
 
 ## <a name="requirements"></a>Requirements
