@@ -6,6 +6,7 @@ import sys
 import time
 import gzip
 import socket
+import platform
 import logging
 import itertools
 import configparser
@@ -55,7 +56,10 @@ class Common:
         """
         try:
             with gzip.open(dumppath, mode) as f:
-                f.write(content)
+                if platform.python_version().startswith('2'):
+                    f.write(content.encode('UTF-8'))
+                else:
+                    f.write(content)
                 self.logger.debug("Successfully saved %s to %s" % (msg, dumppath))
         except Exception as e:
             self.logger.error("Failed to dump %s to %s: %s" % (msg, dumppath, e))
@@ -165,17 +169,23 @@ class GetData(Common):
             except UnicodeDecodeError as e:
                 failcount += 1
                 if self.debug == 'DEBUG':
-                    t = time.asctime()
-                    msg = t + '; ' + str(e) + '; ' + str(line) + '\n'
-                    mode = 'at'
-                    dumppath = os.path.join(self.path_tmp, 'overlap_test_utf8_parse_failures.txt.gz')
-                    self.dumper(dumppath, msg, "line", mode)
+                    if platform.python_version().startswith('3'):
+                        t = time.asctime()
+                        content = t + '; ' + str(e) + '; ' + str(line) + '\n'
+                        mode = 'at'
+                        dumppath = os.path.join(self.path_tmp, 'overlap_test_utf8_parse_failures.txt.gz')
+                        self.dumper(dumppath, content, "line", mode)
+                    else:
+                        self.logger.warning("Saving parse failures caused by UnicodeDecodeError exceptions only supported if you run python 3.x")
                 pass
             except Exception as e:
                 self.logger.error("Unexpected exception. Skipping line. %s" % e)
                 pass
         if failcount > 0:
-            self.logger.warning("Skipped %d lines due to utf-8 decode failures. Set logging mode to DEBUG to write decode failure lines to %s" % (failcount, self.path_tmp))
+            if (self.debug == 'DEBUG' or platform.python_version().startswith('2')):
+                self.logger.warning("Skipped %d lines due to utf-8 decode failures." % failcount)
+            else:
+                self.logger.warning("Skipped %d lines due to utf-8 decode failures. Set logging mode to DEBUG to write decode failure lines to %s" % (failcount, self.path_tmp))
         if ips:
             return ips
         else:
@@ -202,6 +212,8 @@ class GetData(Common):
                         self.df = self.do_pandas(ips, desc)
                         if self.DUMP:
                             dumppath = os.path.join(self.path_tmp, desc + '.gz')
+                           # r.encoding = 'utf-8'
+#                            r.encoding = 'ISO-8859-1'
                             self.dumper(dumppath, r.text, "url content", "wt")
                     else:
                         self.logger.warning('Found no valid ipv4 addresses.')
@@ -374,8 +386,12 @@ class WrapItUp(Common):
             self.logger.debug('Attempting to save data...')
             try:
                 if dtype == 'frame':
-                    savepath = savepath + '.gz'
-                    self.df.to_csv(savepath, index=False, encoding='utf-8', compression='gzip')
+                    if platform.python_version().startswith('3'):
+                        savepath = savepath + '.gz'
+                        self.df.to_csv(savepath, index=False, encoding='utf-8', compression='gzip')
+                    else:
+                        self.df.to_csv(savepath, index=False, encoding='utf-8')
+
                 if dtype == 'fig':
                     data.savefig(savepath, bbox_inches='tight', pad_inches=1)
                 self.logger.info('Successfully saved data to: %s' % os.path.relpath(savepath))
