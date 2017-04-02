@@ -1,5 +1,5 @@
 
-# Blacklist overlap test <img align="right", src="http://i.imgur.com/ln57AGi.png" width="386">
+# Blacklist overlap test <img align="right" src="http://i.imgur.com/ln57AGi.png" width="386">
 
 The blacklist overlap test provides a measure on the degree to which one feed is contained within some other feed. It is a metric that may be used to exclude blacklist feeds that is already contained in other feeds.
 

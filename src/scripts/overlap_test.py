@@ -212,8 +212,6 @@ class GetData(Common):
                         self.df = self.do_pandas(ips, desc)
                         if self.DUMP:
                             dumppath = os.path.join(self.path_tmp, desc + '.gz')
-                           # r.encoding = 'utf-8'
-#                            r.encoding = 'ISO-8859-1'
                             self.dumper(dumppath, r.text, "url content", "wt")
                     else:
                         self.logger.warning('Found no valid ipv4 addresses.')
@@ -221,7 +219,7 @@ class GetData(Common):
                     self.logger.warning('Got status %d' % r.status_code)
             except req.ConnectionError as e:
                 self.logger.error('Failed to fetch url due connectivity issues.')
-                self.logger.error('Error msg: %s' % e)
+                self.logger.error('Error msg: %s' % e.args[0].reason)
                 fail_count += 1
                 if fail_count > 2:
                     self.logger.error('Connectivity issues assumed to be permanent. Will abort.')
